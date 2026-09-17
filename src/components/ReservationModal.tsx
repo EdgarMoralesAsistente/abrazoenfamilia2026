@@ -107,8 +107,8 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
       setErrorMsg('Por favor indica el nombre del colegio o institución educativa.');
       return;
     }
-    if (institutionType === 'parroquia' && parish.includes('Otra') && !customParish.trim()) {
-      setErrorMsg('Por favor indica el nombre de la parroquia o templo.');
+    if (institutionType === 'parroquia' && parish === 'Otra Parroquia' && !customParish.trim()) {
+      setErrorMsg('Por favor escribe el nombre de la parroquia que no está en el listado.');
       return;
     }
 
@@ -130,7 +130,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
     const finalEntity =
       institutionType === 'colegio'
         ? schoolName.trim()
-        : parish.includes('Otra') && customParish.trim()
+        : parish === 'Otra Parroquia' && customParish.trim()
         ? customParish.trim()
         : parish;
 
@@ -481,7 +481,12 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                       </label>
                       <select
                         value={parish}
-                        onChange={(e) => setParish(e.target.value)}
+                        onChange={(e) => {
+                          setParish(e.target.value);
+                          if (e.target.value !== 'Otra Parroquia') {
+                            setCustomParish('');
+                          }
+                        }}
                         className="w-full px-3 py-2 rounded-lg border border-stone-300 text-sm focus:outline-hidden focus:border-amber-700 bg-white"
                       >
                         {MARACAIBO_PARISHES.map((p, idx) => (
@@ -491,14 +496,20 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                         ))}
                       </select>
 
-                      {parish.includes('Otra') && (
-                        <input
-                          type="text"
-                          placeholder="Indica el nombre de tu parroquia o templo"
-                          value={customParish}
-                          onChange={(e) => setCustomParish(e.target.value)}
-                          className="w-full mt-2 px-3 py-2 rounded-lg border border-amber-300 text-sm bg-amber-50/40"
-                        />
+                      {parish === 'Otra Parroquia' && (
+                        <div className="mt-2.5 space-y-1">
+                          <label className="block text-xs font-semibold text-amber-900">
+                            Escribe el nombre de la parroquia *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ej. Parroquia San Cayetano, Capilla..."
+                            value={customParish}
+                            onChange={(e) => setCustomParish(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-amber-300 text-sm bg-amber-50/50 text-stone-900 placeholder-stone-400 focus:outline-hidden focus:border-amber-700 focus:ring-1 focus:ring-amber-700"
+                          />
+                        </div>
                       )}
                     </div>
                   ) : (
