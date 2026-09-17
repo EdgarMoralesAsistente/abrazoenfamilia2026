@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, User, Eye, EyeOff, ShieldCheck, KeyRound, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Lock, User, Eye, EyeOff, ShieldCheck, KeyRound, AlertCircle } from 'lucide-react';
 import { authenticateCrmUser, setCrmSession } from '../../lib/googleSheets';
 import { CrmUser } from '../../types/auth';
 
@@ -47,12 +47,6 @@ export const CrmLoginModal: React.FC<CrmLoginModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillQuickCredentials = (user: string, pass: string) => {
-    setEmailOrUser(user);
-    setPassword(pass);
-    setError(null);
   };
 
   return (
@@ -180,38 +174,6 @@ export const CrmLoginModal: React.FC<CrmLoginModalProps> = ({
               </>
             )}
           </button>
-
-          {/* Guía rápida de credenciales preconfiguradas del Equipo */}
-          <div className="p-3.5 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-2 mt-4 text-[11px] text-stone-600">
-            <div className="flex items-center justify-between font-bold text-stone-800 text-[10px] uppercase tracking-wider">
-              <span>Cuentas Registradas del Equipo</span>
-              <span className="text-amber-800 font-semibold lowercase">click para rellenar</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => fillQuickCredentials('lapastoralfamiliar.mcbo@gmail.com', 'pastoral2026')}
-              className="w-full text-left p-2 rounded-xl border border-stone-200 bg-white hover:border-amber-400 hover:bg-amber-50/50 transition-colors flex items-center justify-between"
-            >
-              <div>
-                <span className="font-bold text-stone-900 block truncate">lapastoralfamiliar.mcbo@gmail.com</span>
-                <span className="text-[10px] text-stone-700">Rol: Administrador · Clave: pastoral2026</span>
-              </div>
-              <CheckCircle2 className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => fillQuickCredentials('pastoral.maracaibo', 'familia2026')}
-              className="w-full text-left p-2 rounded-xl border border-stone-200 bg-white hover:border-amber-400 hover:bg-amber-50/50 transition-colors flex items-center justify-between"
-            >
-              <div>
-                <span className="font-bold text-stone-900 block">pastoral.maracaibo</span>
-                <span className="text-[10px] text-stone-700">Rol: Equipo Pastoral · Clave: familia2026</span>
-              </div>
-              <CheckCircle2 className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-            </button>
-          </div>
         </form>
       </div>
     </div>
