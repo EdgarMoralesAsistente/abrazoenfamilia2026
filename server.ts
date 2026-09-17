@@ -104,7 +104,14 @@ async function startServer() {
       };
 
       // Si se configuró un webhook de Google Sheets, enviar
-      const targetWebhook = googleSheetsWebhookUrl || process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+      const DEFAULT_SHEETS_URL =
+        'https://script.google.com/macros/s/AKfycbzknrMLSmdcZe2HUQIQ6nAJXzw_TA_QSiKj-Hgb-s0YvvBHbronT25t_TzDqcoZ5rOoCw/exec';
+
+      const targetWebhook =
+        googleSheetsWebhookUrl ||
+        process.env.GOOGLE_SHEETS_WEBHOOK_URL ||
+        process.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL ||
+        DEFAULT_SHEETS_URL;
       if (targetWebhook && typeof targetWebhook === 'string' && targetWebhook.startsWith('http')) {
         try {
           // Extraer cantidades por material para el CRM

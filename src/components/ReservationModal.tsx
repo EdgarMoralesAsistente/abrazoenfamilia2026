@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { CAMPAIGN_ITEMS, MARACAIBO_PARISHES } from '../data/parishes';
 import { CartItemSelection, StoredReservation } from '../types';
+import { syncReservationToSheets, getSheetsWebhookUrl } from '../utils/sheetsSync';
 
 interface ReservationModalProps {
   isOpen: boolean;
@@ -154,55 +155,11 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
       emailSent: true
     };
 
-    // Registrar en backend
+    // Sincronizar con Google Sheets CRM y Backend
     try {
-      await fetch('/api/reservations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reservation: newRes,
-          googleSheetsWebhookUrl
-        })
-      });
-    } catch (err) {
-      console.warn('Backend sync local fallback', err);
-    }
-
-    // Envío directo de respaldo desde el navegador si está configurada la URL de Google Sheets
-    if (googleSheetsWebhookUrl && googleSheetsWebhookUrl.startsWith('http')) {
-      try {
-        const now = new Date(newRes.createdAt);
-        const dateFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const crmPayload = {
-          timestamp: dateFormatted,
-          code: newRes.code,
-          institutionType: newRes.institutionType === 'colegio' ? 'Colegio' : 'Parroquia',
-          institutionName: newRes.parish,
-          contactName: newRes.fullName,
-          phone: newRes.phone,
-          email: newRes.email,
-          kitQuantity: kitQuantity,
-          aficheQuantity: individualQuantities['afiche-oficial-2026'] || 0,
-          guiaQuantity: individualQuantities['guia-facilitador-2026'] || 0,
-          hojaQuantity: individualQuantities['hoja-nino-2026'] || 0,
-          totalQuantity: totalItemsCount,
-          totalEUR: Number(totalEUR.toFixed(2)),
-          status: 'Nueva Reserva',
-          paymentStatus: 'Pendiente',
-          paymentMethod: '',
-          paymentRef: '',
-          deliveryStatus: 'Por Imprimir / En Caracas',
-          deliveryDate: '',
-          notes: ''
-        };
-
-        fetch(googleSheetsWebhookUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(crmPayload)
-        }).catch(() => {});
-      } catch {}
+      await syncReservationToSheets(newRes);
+    } catch (e) {
+      console.warn('Error sincronizando reserva con Google Sheets:', e);
     }
 
     // Persistir localmente
@@ -702,6 +659,9 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => {
+                    syncReservationToSheets(confirmedReservation);
+                  }}
                   className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-bold bg-emerald-700 hover:bg-emerald-800 text-white text-sm shadow-md transition-all"
                 >
                   <Phone className="w-4 h-4" />

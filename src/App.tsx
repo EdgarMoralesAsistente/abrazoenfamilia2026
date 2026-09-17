@@ -9,6 +9,7 @@ import { ReservationModal } from './components/ReservationModal';
 import { RecentPurchaseBubble } from './components/RecentPurchaseBubble';
 import { StoredReservation } from './types';
 import { DEFAULT_EXCHANGE_RATE } from './data/parishes';
+import { DEFAULT_SHEETS_WEBHOOK_URL } from './utils/sheetsSync';
 
 export default function App() {
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
@@ -18,10 +19,19 @@ export default function App() {
     return saved ? parseFloat(saved) : DEFAULT_EXCHANGE_RATE;
   });
   const [googleSheetsWebhookUrl] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const queryUrl = params.get('sheets_url') || params.get('webhook');
+      if (queryUrl && queryUrl.startsWith('http')) {
+        localStorage.setItem('aef_sheets_webhook_url', queryUrl);
+        return queryUrl;
+      }
+    }
     return (
       localStorage.getItem('aef_sheets_webhook_url') ||
       (import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL as string) ||
-      ''
+      (process.env.GOOGLE_SHEETS_WEBHOOK_URL as string) ||
+      DEFAULT_SHEETS_WEBHOOK_URL
     );
   });
   const [, setReservations] = useState<StoredReservation[]>([]);
