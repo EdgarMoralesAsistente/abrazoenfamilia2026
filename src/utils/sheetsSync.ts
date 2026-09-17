@@ -69,31 +69,55 @@ export const formatCrmPayload = (res: StoredReservation) => {
   };
 };
 
-export const syncReservationToSheets = async (res: StoredReservation): Promise<boolean> => {
-  const webhookUrl = getSheetsWebhookUrl();
-  const payload = formatCrmPayload(res);
-  const jsonString = JSON.stringify(payload);
+const syncedCodes = new Set<string>();
 
-  // 1. Intento vía backend (/api/reservations)
+export const isReservationSynced = (code: string): boolean => {
+  if (!code) return false;
+  if (syncedCodes.has(code)) return true;
   try {
-    fetch('/api/reservations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reservation: res,
-        googleSheetsWebhookUrl: webhookUrl
-      })
-    }).catch(() => {});
-  } catch {}
+    const raw = sessionStorage.getItem('aef_synced_codes') || '[]';
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.includes(code);
+  } catch {
+    return false;
+  }
+};
 
-  // 2. Si no hay webhook configurado en el navegador, reportar falso
+export const markReservationSynced = (code: string) => {
+  if (!code) return;
+  syncedCodes.add(code);
+  try {
+    const raw = sessionStorage.getItem('aef_synced_codes') || '[]';
+    const parsed = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+    if (!parsed.includes(code)) {
+      parsed.push(code);
+      sessionStorage.setItem('aef_synced_codes', JSON.stringify(parsed));
+    }
+  } catch {}
+};
+
+export const syncReservationToSheets = async (res: StoredReservation): Promise<boolean> => {
+  if (!res || !res.code) return false;
+
+  // Evitar envíos duplicados si este código de reserva ya fue enviado
+  if (isReservationSynced(res.code)) {
+    console.log(`Reserva ${res.code} ya fue sincronizada previamente.`);
+    return true;
+  }
+
+  const webhookUrl = getSheetsWebhookUrl();
   if (!webhookUrl || !webhookUrl.startsWith('http')) {
-    console.warn('Google Sheets Webhook URL no está configurada aún.');
+    console.warn('Google Sheets Webhook URL no configurada.');
     return false;
   }
 
-  // 3. Envío directo desde el navegador (con modo no-cors a Google Apps Script)
-  let success = false;
+  // Marcar de inmediato como sincronizada para evitar peticiones concurrentes
+  markReservationSynced(res.code);
+
+  const payload = formatCrmPayload(res);
+  const jsonString = JSON.stringify(payload);
+
+  // Realizar un único envío directo y confiable hacia Google Apps Script
   try {
     await fetch(webhookUrl, {
       method: 'POST',
@@ -101,21 +125,22 @@ export const syncReservationToSheets = async (res: StoredReservation): Promise<b
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: jsonString
     });
-    success = true;
+    return true;
   } catch (err) {
-    console.warn('Fallo en fetch no-cors a Apps Script:', err);
-  }
-
-  // 4. Respaldo adicional con sendBeacon si está disponible
-  try {
-    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-      const blob = new Blob([jsonString], { type: 'text/plain;charset=utf-8' });
-      navigator.sendBeacon(webhookUrl, blob);
-      success = true;
+    console.warn('Error en envío directo, intentando vía backend:', err);
+    try {
+      await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reservation: res,
+          googleSheetsWebhookUrl: webhookUrl
+        })
+      });
+      return true;
+    } catch (backendErr) {
+      console.warn('Fallo total de envío:', backendErr);
+      return false;
     }
-  } catch (err) {
-    console.warn('Fallo en sendBeacon:', err);
   }
-
-  return success;
 };
