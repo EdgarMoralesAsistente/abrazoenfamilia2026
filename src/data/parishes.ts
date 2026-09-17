@@ -144,6 +144,24 @@ export const MARACAIBO_PARISHES: string[] = [
   'Otra Parroquia'
 ];
 
+export const MARACAIBO_SCHOOLS: string[] = [
+  'Colegio Gonzaga',
+  'Colegio San Vicente de Paúl',
+  'Colegio San Agustín',
+  'Colegio Bella Vista',
+  'Colegio Maristas',
+  'Colegio Claret',
+  'Colegio La Presentación',
+  'Colegio Santa Ana',
+  'Colegio Mater Salvatoris',
+  'Colegio Fe y Alegría La Chinita',
+  'Colegio Los Robles',
+  'Colegio Altamira',
+  'Liceo Los Maristas',
+  'Unidad Educativa Arquidiocesana',
+  'Otro Colegio'
+];
+
 export const PARISH_ROLES = [
   'Coordinador(a) Parroquial de Pastoral Familiar',
   'Párroco / Vicario Parroquial',
