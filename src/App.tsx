@@ -18,7 +18,11 @@ export default function App() {
     return saved ? parseFloat(saved) : DEFAULT_EXCHANGE_RATE;
   });
   const [googleSheetsWebhookUrl] = useState<string>(() => {
-    return localStorage.getItem('aef_sheets_webhook_url') || '';
+    return (
+      localStorage.getItem('aef_sheets_webhook_url') ||
+      (import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL as string) ||
+      ''
+    );
   });
   const [, setReservations] = useState<StoredReservation[]>([]);
 

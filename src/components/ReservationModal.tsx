@@ -168,6 +168,43 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
       console.warn('Backend sync local fallback', err);
     }
 
+    // Envío directo de respaldo desde el navegador si está configurada la URL de Google Sheets
+    if (googleSheetsWebhookUrl && googleSheetsWebhookUrl.startsWith('http')) {
+      try {
+        const now = new Date(newRes.createdAt);
+        const dateFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const crmPayload = {
+          timestamp: dateFormatted,
+          code: newRes.code,
+          institutionType: newRes.institutionType === 'colegio' ? 'Colegio' : 'Parroquia',
+          institutionName: newRes.parish,
+          contactName: newRes.fullName,
+          phone: newRes.phone,
+          email: newRes.email,
+          kitQuantity: kitQuantity,
+          aficheQuantity: individualQuantities['afiche-oficial-2026'] || 0,
+          guiaQuantity: individualQuantities['guia-facilitador-2026'] || 0,
+          hojaQuantity: individualQuantities['hoja-nino-2026'] || 0,
+          totalQuantity: totalItemsCount,
+          totalEUR: Number(totalEUR.toFixed(2)),
+          status: 'Nueva Reserva',
+          paymentStatus: 'Pendiente',
+          paymentMethod: '',
+          paymentRef: '',
+          deliveryStatus: 'Por Imprimir / En Caracas',
+          deliveryDate: '',
+          notes: ''
+        };
+
+        fetch(googleSheetsWebhookUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(crmPayload)
+        }).catch(() => {});
+      } catch {}
+    }
+
     // Persistir localmente
     try {
       const stored = JSON.parse(localStorage.getItem('aef_reservations_mcbo') || '[]');

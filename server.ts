@@ -11,6 +11,8 @@ interface StoredReservation {
   idNumber: string;
   phone: string;
   email: string;
+  institutionType?: 'parroquia' | 'colegio';
+  schoolName?: string;
   parish: string;
   customParish?: string;
   role: string;
@@ -102,21 +104,56 @@ async function startServer() {
       };
 
       // Si se configuró un webhook de Google Sheets, enviar
-      if (googleSheetsWebhookUrl && googleSheetsWebhookUrl.startsWith('http')) {
+      const targetWebhook = googleSheetsWebhookUrl || process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+      if (targetWebhook && typeof targetWebhook === 'string' && targetWebhook.startsWith('http')) {
         try {
-          const sheetRes = await fetch(googleSheetsWebhookUrl, {
+          // Extraer cantidades por material para el CRM
+          const itemsList = Array.isArray(newReservation.items) ? newReservation.items : [];
+          const kitQty = itemsList.find((i: any) => i.itemId === 'kit-completo-2026')?.quantity || 0;
+          const aficheQty = itemsList.find((i: any) => i.itemId === 'afiche-oficial-2026')?.quantity || 0;
+          const guiaQty = itemsList.find((i: any) => i.itemId === 'guia-facilitador-2026')?.quantity || 0;
+          const hojaQty = itemsList.find((i: any) => i.itemId === 'hoja-nino-2026')?.quantity || 0;
+          const totalPiezas = kitQty + aficheQty + guiaQty + hojaQty;
+
+          const now = new Date(newReservation.createdAt || Date.now());
+          const dateFormatted = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+          const crmPayload = {
+            timestamp: dateFormatted,
+            code: newReservation.code,
+            institutionType: newReservation.institutionType === 'colegio' ? 'Colegio' : 'Parroquia',
+            institutionName: newReservation.parish,
+            contactName: newReservation.fullName,
+            phone: newReservation.phone,
+            email: newReservation.email,
+            kitQuantity: kitQty,
+            aficheQuantity: aficheQty,
+            guiaQuantity: guiaQty,
+            hojaQuantity: hojaQty,
+            totalQuantity: totalPiezas,
+            totalEUR: Number(newReservation.totalEUR || 0),
+            status: 'Nueva Reserva',
+            paymentStatus: 'Pendiente',
+            paymentMethod: '',
+            paymentRef: '',
+            deliveryStatus: 'Por Imprimir / En Caracas',
+            deliveryDate: '',
+            notes: newReservation.notes || '',
+            reservation: newReservation
+          };
+
+          const sheetRes = await fetch(targetWebhook, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              timestamp: new Date().toISOString(),
-              reservation: newReservation
-            })
+            body: JSON.stringify(crmPayload),
+            redirect: 'follow'
           });
+
           if (sheetRes.ok) {
             newReservation.syncedToGoogleSheets = true;
           }
         } catch (webhookErr) {
-          console.error('Error enviando al Webhook de Google Sheets:', webhookErr);
+          console.error('Error enviando al Webhook de Google Sheets CRM:', webhookErr);
         }
       }
 
