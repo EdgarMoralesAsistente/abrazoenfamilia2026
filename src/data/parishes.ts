@@ -66,7 +66,7 @@ export const CAMPAIGN_ITEMS: MaterialItem[] = [
 ];
 
 // Lista de Parroquias Eclesiales de la Arquidiócesis de Maracaibo
-export const MARACAIBO_PARISHES: string[] = [
+const RAW_MARACAIBO_PARISHES: string[] = [
   'El Sagrario La Catedral de los Santos Apóstoles Pedro y Pablo',
   'Ntra. Sra. de la Asunción',
   'Ntra. Sra. de la Medalla Milagrosa',
@@ -135,7 +135,12 @@ export const MARACAIBO_PARISHES: string[] = [
   'Ntra. Sra. de Chiquinquirá. La Ensenada',
   'Ntra. Sra. del Carmen. El Carmelo. La Cañada de Urdaneta',
   'Purísima Madre de Dios y San Benito de Palermo. El Bajo',
-  'San Antonio de Padua y Ntra. Sra. Virgen de los Parrales. La Cañada De Urdaneta',
+  'San Antonio de Padua y Ntra. Sra. Virgen de los Parrales. La Cañada De Urdaneta'
+];
+
+// Lista de Parroquias Eclesiales ordenadas alfabéticamente de la A a la Z
+export const MARACAIBO_PARISHES: string[] = [
+  ...[...RAW_MARACAIBO_PARISHES].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' })),
   'Otra Parroquia'
 ];
 
