@@ -1,0 +1,7 @@
+{
+  "name": "Campaña Abrazo en Familia 2026 - Reservación de Material Impreso",
+  "description": "Plataforma oficial de reservación de kits impresos y material pedagógico para la Campaña Abrazo en Familia 2026 en las parroquias eclesiales de Maracaibo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
