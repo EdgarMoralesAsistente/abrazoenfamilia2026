@@ -349,10 +349,10 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
     }
 
     const message = encodeURIComponent(
-      `Paz y Bien, estimado/a ${res.contactName}. Le saludamos desde el Secretariado de Pastoral Familiar de la Arquidiócesis de Maracaibo respecto a su reserva *${res.code}* de la Campaña Abrazo en Familia 2026 para *${res.institutionName}*.\n\n` +
-      `Estado actual del pago: *${res.paymentStatus}*\n` +
+      `¡Paz y Bien, ${res.contactName}! Te escribimos desde el *Secretariado de Pastoral Familiar de la Arquidiócesis de Maracaibo* respecto a tu reserva *${res.code}* de la Campaña Abrazo en Familia 2026 para *${res.institutionName}*.\n\n` +
+      `Estado del pago: *${res.paymentStatus}*\n` +
       `Total: *${res.totalEUR.toFixed(2)} €* (${res.totalQuantity} piezas solicitadas).\n\n` +
-      `¿Podemos apoyarle con alguna consulta o recepción del comprobante? ¡Dios bendiga a su comunidad!`
+      `¿Te podemos apoyar con alguna consulta o la recepción de tu comprobante? ¡Dios bendiga a tu comunidad!`
     );
 
     window.open(`https://wa.me/${formattedPhone}?text=${message}`, '_blank');
