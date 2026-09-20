@@ -215,9 +215,9 @@ export const CrmCharts: React.FC<CrmChartsProps> = ({ reservations }) => {
       {/* ========================================================================= */}
       {/* FILA 1: MATERIALES SOLICITADOS (CON ETIQUETAS) + COMPARATIVA PARROQUIAS/COLEGIOS */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-w-0">
         {/* GRÁFICO 1: Materiales Solicitados para Caracas con cantidad visible en las barras */}
-        <div className="lg:col-span-7 bg-white border border-stone-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-7 bg-white border border-stone-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <div>
               <h4 className="text-sm font-bold text-stone-900 flex items-center gap-1.5">
@@ -306,7 +306,7 @@ export const CrmCharts: React.FC<CrmChartsProps> = ({ reservations }) => {
         </div>
 
         {/* GRÁFICO 2: Comparativo Parroquias vs Colegios */}
-        <div className="lg:col-span-5 bg-white border border-stone-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-5 bg-white border border-stone-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between min-w-0">
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
               <h4 className="text-sm font-bold text-stone-900 flex items-center gap-1.5">
@@ -462,9 +462,9 @@ export const CrmCharts: React.FC<CrmChartsProps> = ({ reservations }) => {
       {/* ========================================================================= */}
       {/* FILA 2: ESTADO DE PAGOS + ESTADO LOGÍSTICO + ALERTAS PARA TOMA DE DECISIONES */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 min-w-0">
         {/* GRÁFICO 3: Estado de Cobranzas y Pagos */}
-        <div className="lg:col-span-4 bg-white border border-stone-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white border border-stone-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between min-w-0">
           <div className="mb-2">
             <h4 className="text-sm font-bold text-stone-900 flex items-center gap-1.5">
               <Euro className="w-4 h-4 text-emerald-700" />
@@ -526,7 +526,7 @@ export const CrmCharts: React.FC<CrmChartsProps> = ({ reservations }) => {
         </div>
 
         {/* GRÁFICO 4: Cadena Logística y Despacho */}
-        <div className="lg:col-span-4 bg-white border border-stone-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white border border-stone-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between min-w-0">
           <div className="mb-2">
             <h4 className="text-sm font-bold text-stone-900 flex items-center gap-1.5">
               <Truck className="w-4 h-4 text-blue-700" />
@@ -585,7 +585,7 @@ export const CrmCharts: React.FC<CrmChartsProps> = ({ reservations }) => {
         </div>
 
         {/* MÓDULO 5: Alertas Inteligentes para la Toma de Decisiones */}
-        <div className="lg:col-span-4 bg-white border border-stone-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white border border-stone-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between min-w-0">
           <div>
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-bold text-stone-900 flex items-center gap-1.5">

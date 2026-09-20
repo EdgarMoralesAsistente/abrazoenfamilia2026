@@ -24,6 +24,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { CrmReservation, ReservationStatus, PaymentStatus, DeliveryStatus } from '../../types/reservation';
+import { formatPhoneForWhatsApp } from '../../utils/phoneUtils';
 
 interface CrmEditModalProps {
   isOpen: boolean;
@@ -43,18 +44,6 @@ interface WhatsAppTemplate {
   icon: string;
   generateText: (res: CrmReservation) => string;
 }
-
-// Formateador telefónico internacional para WhatsApp (+58 para Venezuela)
-const formatWhatsAppPhone = (rawPhone: string): string => {
-  const digits = rawPhone.replace(/\D/g, '');
-  if (!digits) return '';
-  if (digits.startsWith('0')) {
-    return '58' + digits.substring(1);
-  } else if (!digits.startsWith('58')) {
-    return '58' + digits;
-  }
-  return digits;
-};
 
 export const CrmEditModal: React.FC<CrmEditModalProps> = ({
   isOpen,
@@ -313,7 +302,7 @@ export const CrmEditModal: React.FC<CrmEditModalProps> = ({
 
   // Enviar mensaje vía WhatsApp Web (Desktop / Web App)
   const handleSendWhatsAppWeb = () => {
-    const cleanPhone = formatWhatsAppPhone(targetPhone || reservation.phone);
+    const cleanPhone = formatPhoneForWhatsApp(targetPhone || reservation.phone);
     const encoded = encodeURIComponent(customMessage);
     const url = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`;
     window.open(url, '_blank');
@@ -321,7 +310,7 @@ export const CrmEditModal: React.FC<CrmEditModalProps> = ({
 
   // Enviar vía WhatsApp general (App de escritorio o teléfono)
   const handleSendWhatsAppDirect = () => {
-    const cleanPhone = formatWhatsAppPhone(targetPhone || reservation.phone);
+    const cleanPhone = formatPhoneForWhatsApp(targetPhone || reservation.phone);
     const encoded = encodeURIComponent(customMessage);
     const url = `https://wa.me/${cleanPhone}?text=${encoded}`;
     window.open(url, '_blank');

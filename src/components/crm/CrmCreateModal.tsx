@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Plus, RefreshCw } from 'lucide-react';
 import { CrmReservation, ReservationType } from '../../types/reservation';
 import { MARACAIBO_PARISHES, MARACAIBO_SCHOOLS } from '../../data/parishes';
+import { InternationalPhoneInput } from '../InternationalPhoneInput';
 
 interface CrmCreateModalProps {
   isOpen: boolean;
@@ -201,13 +202,10 @@ export const CrmCreateModal: React.FC<CrmCreateModalProps> = ({
             </div>
             <div className="space-y-1.5">
               <label className="font-bold text-stone-900 block">Teléfono WhatsApp</label>
-              <input
-                type="tel"
-                placeholder="0414..."
+              <InternationalPhoneInput
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(fullFormatted) => setPhone(fullFormatted)}
                 required
-                className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 font-mono"
               />
             </div>
             <div className="space-y-1.5">

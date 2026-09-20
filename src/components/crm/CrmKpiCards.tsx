@@ -27,9 +27,9 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
       : 0;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 min-w-0">
       {/* KPI 1: Total Reservas con Barra de Progreso de Pagadas */}
-      <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3">
+      <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3 min-w-0">
         <div className="flex items-center justify-between text-stone-600">
           <span className="text-xs font-bold uppercase tracking-wider">Total Reservas</span>
           <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center">
@@ -64,20 +64,20 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
       </div>
 
       {/* KPI 2: Monto Total (€) con Barra de Progreso vs Monto Pagado */}
-      <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3">
+      <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3 min-w-0">
         <div className="flex items-center justify-between text-stone-600">
           <span className="text-xs font-bold uppercase tracking-wider">Monto Total (€)</span>
-          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
             <Euro className="w-4 h-4" />
           </div>
         </div>
 
         <div>
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline justify-between gap-1">
             <span className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
               {kpis.totalMontoEUR.toFixed(2)} €
             </span>
-            <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+            <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 whitespace-nowrap">
               {pctMontoRecaudado}%
             </span>
           </div>
@@ -90,7 +90,7 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
                 style={{ width: `${Math.min(pctMontoRecaudadoNum, 100)}%` }}
               />
             </div>
-            <div className="flex items-center justify-between text-[11px] text-stone-600 mt-1 font-medium">
+            <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-stone-600 mt-1 font-medium">
               <span className="text-emerald-700 font-bold inline-flex items-center gap-0.5">
                 <CheckCircle2 className="w-3 h-3" />
                 {kpis.totalMontoRecaudadoEUR.toFixed(2)} €
@@ -102,10 +102,10 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
       </div>
 
       {/* KPI 3: Total Piezas */}
-      <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3">
+      <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3 min-w-0">
         <div className="flex items-center justify-between text-stone-600">
           <span className="text-xs font-bold uppercase tracking-wider">Total Piezas</span>
-          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-800 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-800 flex items-center justify-center shrink-0">
             <Package className="w-4 h-4" />
           </div>
         </div>
@@ -124,26 +124,26 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
       </div>
 
       {/* KPI 4: Pagos Pendientes */}
-      <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3">
+      <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3 min-w-0">
         <div className="flex items-center justify-between text-stone-600">
           <span className="text-xs font-bold uppercase tracking-wider">Pagos Pendientes</span>
-          <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
             <Clock className="w-4 h-4" />
           </div>
         </div>
 
         <div>
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline justify-between gap-1">
             <span className="text-2xl sm:text-3xl font-black text-amber-800 tracking-tight">
               {kpis.reservasPendientesPago}
             </span>
             {kpis.reservasVerificando > 0 && (
-              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60">
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60 whitespace-nowrap">
                 {kpis.reservasVerificando} por conciliar
               </span>
             )}
           </div>
-          <div className="mt-2 pt-1.5 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-600">
+          <div className="mt-2 pt-1.5 border-t border-stone-100 flex flex-wrap items-center justify-between gap-1 text-[11px] text-stone-600">
             <span>Por cobrar:</span>
             <span className="font-bold text-amber-900">{kpis.montoPendientePagoEUR.toFixed(2)} €</span>
           </div>
@@ -151,20 +151,20 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
       </div>
 
       {/* KPI 5: Logística y Entregas */}
-      <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3">
+      <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3 min-w-0">
         <div className="flex items-center justify-between text-stone-600">
           <span className="text-xs font-bold uppercase tracking-wider">Por Entregar</span>
-          <div className="w-8 h-8 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
             <Truck className="w-4 h-4" />
           </div>
         </div>
 
         <div>
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline justify-between gap-1">
             <span className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
               {kpis.entregasPendientes}
             </span>
-            <span className="text-xs font-extrabold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-extrabold text-stone-600 bg-stone-100 px-2 py-0.5 rounded-full whitespace-nowrap">
               {pctEntregas}% entregadas
             </span>
           </div>
@@ -176,7 +176,7 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
                 style={{ width: `${Math.min(pctEntregas, 100)}%` }}
               />
             </div>
-            <div className="flex items-center justify-between text-[11px] text-stone-600 mt-1 font-medium">
+            <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-stone-600 mt-1 font-medium">
               <span>{kpis.entregasCompletadas} en destino</span>
               <span>{kpis.entregasPendientes} en Caracas/ruta</span>
             </div>

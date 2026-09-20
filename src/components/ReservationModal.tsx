@@ -10,11 +10,13 @@ import {
   Layers,
   ClipboardCheck,
   Church,
-  GraduationCap
+  GraduationCap,
+  AlertCircle
 } from 'lucide-react';
 import { CAMPAIGN_ITEMS, MARACAIBO_PARISHES } from '../data/parishes';
 import { CartItemSelection, StoredReservation } from '../types';
 import { syncReservationToSheets, getSheetsWebhookUrl } from '../utils/sheetsSync';
+import { InternationalPhoneInput } from './InternationalPhoneInput';
 
 interface ReservationModalProps {
   isOpen: boolean;
@@ -233,10 +235,12 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
         <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
           <div>
             <h3 className="text-base sm:text-lg font-bold text-stone-900">
-              {confirmedReservation ? 'Comprobante de Reservación' : 'Reservar Material Impreso'}
+              {confirmedReservation ? 'Verificación de Reservación' : 'Reservar Material Impreso'}
             </h3>
-            <p className="text-xs text-stone-700">
-              Campaña Abrazo en Familia 2026 · Solicitud a Caracas
+            <p className="text-xs text-stone-600">
+              {confirmedReservation
+                ? 'Paso 2: Revisa tu resumen y envíalo por WhatsApp'
+                : 'Campaña Abrazo en Familia 2026 · Solicitud a Caracas'}
             </p>
           </div>
           <button
@@ -396,13 +400,10 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                     <label className="block text-xs font-semibold text-stone-700 mb-1">
                       WhatsApp / Teléfono *
                     </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="0414-1234567"
+                    <InternationalPhoneInput
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border border-stone-300 text-sm focus:outline-hidden focus:border-amber-700"
+                      onChange={(fullFormatted) => setPhone(fullFormatted)}
+                      required
                     />
                   </div>
                   <div>
@@ -556,16 +557,22 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
           ) : (
             /* VISTA DE COMPROBANTE DE RESERVACIÓN Y ENVÍO POR WHATSAPP */
             <div className="space-y-4">
-              <div className="text-center py-1">
-                <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-1.5 font-bold">
-                  <Check className="w-5 h-5" />
+              <div className="text-center py-2 px-1">
+                <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-2 font-bold ring-4 ring-amber-50">
+                  <ClipboardCheck className="w-5 h-5" />
                 </div>
-                <h4 className="text-base font-extrabold text-stone-900">
-                  ¡Reserva Generada Exitosamente!
+                <h4 className="text-base sm:text-lg font-extrabold text-stone-900">
+                  ¡Revisa y Verifica tu Reserva!
                 </h4>
-                <p className="text-xs text-stone-600">
-                  Tu reservación de material para la Campaña Abrazo en Familia 2026 ha sido registrada exitosamente.
+                <p className="text-xs text-stone-600 mt-1 max-w-sm mx-auto leading-relaxed">
+                  Este es solo el <strong>resumen de tu reservación</strong> para que verifiques que todos los datos y materiales solicitados estén correctos.
                 </p>
+                <div className="mt-2.5 bg-amber-50 border border-amber-300/90 rounded-xl p-2.5 max-w-sm mx-auto text-left flex items-start gap-2 shadow-2xs">
+                  <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-950 leading-snug">
+                    <strong>Tu reservación aún NO está lista ni formalizada.</strong> Si todo está bien, debes enviárnosla por WhatsApp haciendo clic en el botón verde <strong>«Enviar reserva por WhatsApp»</strong>.
+                  </p>
+                </div>
               </div>
 
               {/* TARJETA DE COMPROBANTE DE RESERVACIÓN */}
@@ -575,7 +582,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                   <div className="flex items-center gap-2">
                     <ClipboardCheck className="w-4 h-4 text-amber-400" />
                     <span className="text-xs font-black uppercase tracking-wider">
-                      Comprobante de Reservación
+                      Resumen de Reservación
                     </span>
                   </div>
                   <span className="text-xs font-mono font-bold text-amber-300 bg-stone-800 px-2 py-0.5 rounded">
@@ -593,7 +600,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                       <span className="font-bold text-stone-900 block truncate">
                         {confirmedReservation.fullName}
                       </span>
-                      <span className="text-stone-600 text-[11px] block truncate">
+                      <span className="text-stone-600 text-[11px] block truncate font-mono">
                         {confirmedReservation.phone}
                       </span>
                     </div>
@@ -610,7 +617,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                   {/* Detalle de Materiales Reservados */}
                   <div>
                     <span className="text-[10px] uppercase text-stone-500 font-bold block mb-1.5">
-                      Materiales Reservados
+                      Materiales Solicitados
                     </span>
                     <div className="space-y-1.5">
                       {confirmedReservation.items.map((it) => {
@@ -642,7 +649,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                   {/* Total de la Reserva */}
                   <div className="pt-2 border-t border-stone-300 flex items-center justify-between bg-white -mx-3.5 -mb-3.5 p-3 rounded-b-xl">
                     <span className="font-bold text-stone-800 text-xs uppercase">
-                      Total de la Reserva:
+                      Total a Pagar:
                     </span>
                     <span className="text-lg font-black text-amber-900">
                       {confirmedReservation.totalEUR.toFixed(2)} €
@@ -662,16 +669,20 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                   onClick={() => {
                     syncReservationToSheets(confirmedReservation);
                   }}
-                  className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-bold bg-emerald-700 hover:bg-emerald-800 text-white text-sm shadow-md transition-all"
+                  className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-bold bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white text-sm shadow-md shadow-emerald-900/15 transition-all border border-emerald-600"
                 >
                   <Phone className="w-4 h-4" />
                   <span>Enviar reserva por WhatsApp</span>
                   <ExternalLink className="w-3.5 h-3.5 opacity-80" />
                 </a>
 
+                <p className="text-[11px] text-center text-stone-500 font-medium">
+                  Al pulsar el botón se abrirá WhatsApp con los datos listos para enviar a la Pastoral.
+                </p>
+
                 <button
                   onClick={handleClose}
-                  className="w-full py-2.5 rounded-xl font-medium text-stone-600 hover:bg-stone-100 text-xs transition-colors"
+                  className="w-full py-2.5 rounded-xl font-medium text-stone-500 hover:text-stone-700 hover:bg-stone-100 text-xs transition-colors"
                 >
                   Cerrar ventana
                 </button>
