@@ -5,6 +5,7 @@ import {
   Plus,
   Search,
   Download,
+  FileText,
   MessageCircle,
   Edit2,
   Trash2,
@@ -31,6 +32,7 @@ import { CrmKpiCards } from './CrmKpiCards';
 import { CrmCharts } from './CrmCharts';
 import { CrmEditModal } from './CrmEditModal';
 import { CrmCreateModal } from './CrmCreateModal';
+import { CrmExecutivePdfReport } from './CrmExecutivePdfReport';
 
 interface CrmDashboardProps {
   onBackToPublicSite: () => void;
@@ -57,6 +59,7 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
   // Modales
   const [editingReservation, setEditingReservation] = useState<CrmReservation | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [deletingCode, setDeletingCode] = useState<string | null>(null);
 
   // Toast
@@ -118,25 +121,43 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
     let totalMonto = 0;
     let totalMontoRecaudado = 0;
     let totalPiezas = 0;
+    let reservasPagadas = 0;
     let pendientesPago = 0;
+    let reservasVerificando = 0;
     let montoPendientePago = 0;
     let entregasPendientes = 0;
+    let entregasCompletadas = 0;
     let totalKits = 0;
     let totalAfiches = 0;
     let totalGuias = 0;
     let totalHojas = 0;
 
+    let totalParroquias = 0;
+    let totalColegios = 0;
+    let montoParroquiasEUR = 0;
+    let montoColegiosEUR = 0;
+    let piezasParroquias = 0;
+    let piezasColegios = 0;
+
     reservations.forEach((r) => {
       const eur = Number(r.totalEUR || 0);
       totalMonto += eur;
+
       if (r.paymentStatus === 'Pagado') {
+        reservasPagadas += 1;
         totalMontoRecaudado += eur;
+      } else if (r.paymentStatus === 'Verificando') {
+        reservasVerificando += 1;
+        pendientesPago += 1;
+        montoPendientePago += eur;
       } else {
         pendientesPago += 1;
         montoPendientePago += eur;
       }
 
-      if (r.deliveryStatus !== 'Entregado') {
+      if (r.deliveryStatus === 'Entregado') {
+        entregasCompletadas += 1;
+      } else {
         entregasPendientes += 1;
       }
 
@@ -144,12 +165,23 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
       const afiches = Number(r.aficheQuantity || 0);
       const guias = Number(r.guiaQuantity || 0);
       const hojas = Number(r.hojaQuantity || 0);
+      const rPiezas = Number(r.totalQuantity || (kits + afiches + guias + hojas));
 
       totalKits += kits;
       totalAfiches += afiches;
       totalGuias += guias;
       totalHojas += hojas;
-      totalPiezas += Number(r.totalQuantity || (kits + afiches + guias + hojas));
+      totalPiezas += rPiezas;
+
+      if (r.institutionType === 'Parroquia') {
+        totalParroquias += 1;
+        montoParroquiasEUR += eur;
+        piezasParroquias += rPiezas;
+      } else {
+        totalColegios += 1;
+        montoColegiosEUR += eur;
+        piezasColegios += rPiezas;
+      }
     });
 
     return {
@@ -157,13 +189,22 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
       totalMontoEUR: totalMonto,
       totalMontoRecaudadoEUR: totalMontoRecaudado,
       totalPiezas,
+      reservasPagadas,
       reservasPendientesPago: pendientesPago,
+      reservasVerificando,
       montoPendientePagoEUR: montoPendientePago,
       entregasPendientes,
+      entregasCompletadas,
       totalKits,
       totalAfiches,
       totalGuias,
-      totalHojas
+      totalHojas,
+      totalParroquias,
+      totalColegios,
+      montoParroquiasEUR,
+      montoColegiosEUR,
+      piezasParroquias,
+      piezasColegios
     };
   }, [reservations]);
 
@@ -375,6 +416,17 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
             >
               <Download className="w-3.5 h-3.5" />
               <span>Exportar CSV</span>
+            </button>
+
+            {/* Botón Descargar Reporte PDF (1 Página) */}
+            <button
+              onClick={() => setIsPdfModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-amber-200/80 bg-amber-50 hover:bg-amber-100 text-xs font-bold text-amber-900 transition-colors shadow-2xs cursor-pointer"
+              title="Descargar Reporte Ejecutivo en PDF (1 página con KPI y Gráficos)"
+            >
+              <FileText className="w-3.5 h-3.5 text-amber-800" />
+              <span className="hidden sm:inline">Reporte PDF (1 Pág)</span>
+              <span className="sm:hidden">PDF</span>
             </button>
 
             {/* Botón Nueva Reserva */}
@@ -695,6 +747,15 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={handleCreateReservation}
+      />
+
+      {/* Modal de Reporte Ejecutivo en PDF (1 Página) */}
+      <CrmExecutivePdfReport
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        reservations={reservations}
+        kpis={kpis}
+        currentUser={currentUser}
       />
 
       {/* Diálogo de Confirmación de Eliminación */}

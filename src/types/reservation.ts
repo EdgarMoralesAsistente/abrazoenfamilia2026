@@ -35,11 +35,20 @@ export interface CrmKPIs {
   totalMontoEUR: number;
   totalMontoRecaudadoEUR: number;
   totalPiezas: number;
+  reservasPagadas: number;
   reservasPendientesPago: number;
+  reservasVerificando: number;
   montoPendientePagoEUR: number;
   entregasPendientes: number;
+  entregasCompletadas: number;
   totalKits: number;
   totalAfiches: number;
   totalGuias: number;
   totalHojas: number;
+  totalParroquias: number;
+  totalColegios: number;
+  montoParroquiasEUR: number;
+  montoColegiosEUR: number;
+  piezasParroquias: number;
+  piezasColegios: number;
 }
