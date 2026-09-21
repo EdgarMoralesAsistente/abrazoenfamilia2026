@@ -3,11 +3,14 @@
  * Pastoral Familiar · Arquidiócesis de Maracaibo
  *
  * Conexión bidireccional entre la SPA y Google Sheets.
- * Soporta autenticación de miembros del equipo, CRUD de reservas y sincronización.
+ * Soporta autenticación de miembros del equipo, CRUD de reservas, gestión de pagos y sincronización.
  */
 
 const SHEET_NAME = "Reservas CRM";
 const USERS_SHEET_NAME = "Usuarios CRM";
+const PAYMENTS_SHEET_NAME = "Pagos Reportados";
+const INVENTORY_SHEET_NAME = "Inventario y Despachos";
+const AUDIT_SHEET_NAME = "Historial y Auditoría";
 
 function getTargetSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -68,11 +71,347 @@ function getUsersSheet() {
 }
 
 /**
- * Endpoint GET: Devuelve reservas o usuarios según el parámetro ?sheet=
+ * Inicializa y configura todas las hojas necesarias en Google Sheets:
+ * 1. Reservas CRM (Base central de pedidos y cotizaciones)
+ * 2. Pagos Reportados (Histórico de transacciones bancarias, referencias, comprobantes y validaciones)
+ * 3. Inventario y Despachos (Control logístico de materiales: kits, guías, afiches, hojas y estados de entrega)
+ * 4. Usuarios CRM (Miembros autorizados y accesos)
+ * 5. Historial y Auditoría (Bitácora de cambios y trazabilidad de acciones)
+ */
+function initializeAllRequiredSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const createdSheets = [];
+  const existingSheets = [];
+
+  // ==========================================
+  // 1. Hoja "Reservas CRM"
+  // ==========================================
+  let reservasSheet = ss.getSheetByName(SHEET_NAME);
+  if (!reservasSheet) {
+    reservasSheet = ss.insertSheet(SHEET_NAME, 0);
+    reservasSheet.appendRow([
+      "Fecha / Hora",
+      "Código",
+      "Tipo Institución",
+      "Parroquia / Colegio",
+      "Solicitante",
+      "Teléfono",
+      "Correo Electrónico",
+      "Kits",
+      "Afiches",
+      "Guías",
+      "Hojas Niños",
+      "Total Piezas",
+      "Total EUR",
+      "Estado Reserva",
+      "Estado Pago",
+      "Método de Pago",
+      "Nro. Referencia",
+      "Fecha del Pago",
+      "Comprobante Pago",
+      "Estado Entrega",
+      "Fecha Entrega",
+      "Notas / Observaciones"
+    ]);
+    reservasSheet.getRange(1, 1, 1, 22)
+      .setFontWeight("bold")
+      .setBackground("#78350f")
+      .setFontColor("#ffffff");
+    reservasSheet.setFrozenRows(1);
+    createdSheets.push(SHEET_NAME);
+  } else {
+    existingSheets.push(SHEET_NAME);
+    // Verificar si faltan columnas nuevas en Reservas CRM (Fecha Pago y Comprobante)
+    const lastCol = reservasSheet.getLastColumn();
+    if (lastCol < 22 && reservasSheet.getLastRow() >= 1) {
+      const headers = reservasSheet.getRange(1, 1, 1, Math.max(lastCol, 1)).getValues()[0];
+      const headerStr = headers.join(" ").toLowerCase();
+      if (!headerStr.includes("comprobante") && !headerStr.includes("fecha del pago")) {
+        // Asegurar encabezados completos
+        reservasSheet.getRange(1, 18, 1, 2).setValues([["Fecha del Pago", "Comprobante Pago"]]);
+        reservasSheet.getRange(1, 18, 1, 2)
+          .setFontWeight("bold")
+          .setBackground("#78350f")
+          .setFontColor("#ffffff");
+      }
+    }
+  }
+
+  // ==========================================
+  // 2. Hoja "Pagos Reportados"
+  // ==========================================
+  let pagosSheet = ss.getSheetByName(PAYMENTS_SHEET_NAME);
+  if (!pagosSheet) {
+    pagosSheet = ss.insertSheet(PAYMENTS_SHEET_NAME);
+    pagosSheet.appendRow([
+      "Fecha Registro",
+      "Código Reserva",
+      "Institución / Solicitante",
+      "Monto Total EUR",
+      "Método de Pago",
+      "Nro. Referencia Bancaria",
+      "Fecha del Pago",
+      "Estado del Pago",
+      "Comprobante (Imagen/Enlace)",
+      "Verificado Por",
+      "Notas del Pago"
+    ]);
+    pagosSheet.getRange(1, 1, 1, 11)
+      .setFontWeight("bold")
+      .setBackground("#065f46") // Verde esmeralda bancario
+      .setFontColor("#ffffff");
+    pagosSheet.setFrozenRows(1);
+    createdSheets.push(PAYMENTS_SHEET_NAME);
+  } else {
+    existingSheets.push(PAYMENTS_SHEET_NAME);
+  }
+
+  // ==========================================
+  // 3. Hoja "Inventario y Despachos"
+  // ==========================================
+  let inventarioSheet = ss.getSheetByName(INVENTORY_SHEET_NAME);
+  if (!inventarioSheet) {
+    inventarioSheet = ss.insertSheet(INVENTORY_SHEET_NAME);
+    inventarioSheet.appendRow([
+      "Fecha Actualización",
+      "Código Reserva",
+      "Tipo Institución",
+      "Parroquia / Colegio",
+      "Responsable Retiro",
+      "Teléfono Contacto",
+      "Kits Asignados",
+      "Afiches Asignados",
+      "Guías Asignadas",
+      "Hojas Asignadas",
+      "Total Piezas",
+      "Estado Entrega",
+      "Fecha Prevista / Efectiva",
+      "Lugar de Entrega / Despacho",
+      "Observaciones de Despacho"
+    ]);
+    inventarioSheet.getRange(1, 1, 1, 15)
+      .setFontWeight("bold")
+      .setBackground("#1e40af") // Azul logístico
+      .setFontColor("#ffffff");
+    inventarioSheet.setFrozenRows(1);
+    createdSheets.push(INVENTORY_SHEET_NAME);
+  } else {
+    existingSheets.push(INVENTORY_SHEET_NAME);
+  }
+
+  // ==========================================
+  // 4. Hoja "Usuarios CRM"
+  // ==========================================
+  let userSheet = ss.getSheetByName(USERS_SHEET_NAME);
+  if (!userSheet) {
+    getUsersSheet();
+    createdSheets.push(USERS_SHEET_NAME);
+  } else {
+    existingSheets.push(USERS_SHEET_NAME);
+  }
+
+  // ==========================================
+  // 5. Hoja "Historial y Auditoría"
+  // ==========================================
+  let auditSheet = ss.getSheetByName(AUDIT_SHEET_NAME);
+  if (!auditSheet) {
+    auditSheet = ss.insertSheet(AUDIT_SHEET_NAME);
+    auditSheet.appendRow([
+      "Fecha y Hora",
+      "Usuario / Operador",
+      "Acción Realizada",
+      "Código Afectado",
+      "Detalle del Cambio",
+      "IP / Origen"
+    ]);
+    auditSheet.getRange(1, 1, 1, 6)
+      .setFontWeight("bold")
+      .setBackground("#374151") // Gris pizarra auditoría
+      .setFontColor("#ffffff");
+    auditSheet.setFrozenRows(1);
+
+    // Registrar evento de creación inicial
+    auditSheet.appendRow([
+      Utilities.formatDate(new Date(), "America/Caracas", "dd/MM/yyyy HH:mm:ss"),
+      "Sistema Pastoral Familiar",
+      "SETUP_SHEETS",
+      "SISTEMA",
+      "Estructura multi-pestaña inicializada correctamente",
+      "CRM Web"
+    ]);
+
+    createdSheets.push(AUDIT_SHEET_NAME);
+  } else {
+    existingSheets.push(AUDIT_SHEET_NAME);
+  }
+
+  return {
+    success: true,
+    message: "Verificación y creación de hojas completada con éxito.",
+    createdSheets: createdSheets,
+    existingSheets: existingSheets,
+    allSheets: [SHEET_NAME, PAYMENTS_SHEET_NAME, INVENTORY_SHEET_NAME, USERS_SHEET_NAME, AUDIT_SHEET_NAME]
+  };
+}
+
+/**
+ * Sincroniza o registra una transacción en la pestaña "Pagos Reportados"
+ */
+function recordPaymentInPaymentsSheet(body) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let pagosSheet = ss.getSheetByName(PAYMENTS_SHEET_NAME);
+    if (!pagosSheet) {
+      initializeAllRequiredSheets();
+      pagosSheet = ss.getSheetByName(PAYMENTS_SHEET_NAME);
+    }
+    if (!pagosSheet) return;
+
+    const code = String(body.code || "").trim();
+    if (!code) return;
+
+    const lastRow = pagosSheet.getLastRow();
+    let rowIndex = -1;
+
+    if (lastRow > 1) {
+      const codeValues = pagosSheet.getRange(2, 2, lastRow - 1, 1).getValues();
+      for (let i = 0; i < codeValues.length; i++) {
+        if (String(codeValues[i][0]).trim() === code) {
+          rowIndex = i + 2;
+          break;
+        }
+      }
+    }
+
+    const receiptDisplay = body.paymentReceipt
+      ? (String(body.paymentReceipt).startsWith("data:image")
+          ? "Imagen Adjunta en Sistema (" + Math.round(body.paymentReceipt.length / 1024) + " KB)"
+          : String(body.paymentReceipt))
+      : "";
+
+    const paymentRowData = [
+      body.timestamp || Utilities.formatDate(new Date(), "America/Caracas", "dd/MM/yyyy HH:mm"),
+      code,
+      (body.institutionName || "") + " - " + (body.contactName || ""),
+      Number(body.totalEUR || 0),
+      body.paymentMethod || "Pago Móvil",
+      body.paymentRef || "",
+      body.paymentDate || "",
+      body.paymentStatus || "Pendiente",
+      receiptDisplay,
+      body.updatedBy || "Operador CRM",
+      body.notes || ""
+    ];
+
+    if (rowIndex > 1) {
+      pagosSheet.getRange(rowIndex, 1, 1, 11).setValues([paymentRowData]);
+    } else {
+      pagosSheet.appendRow(paymentRowData);
+    }
+  } catch (err) {
+    Logger.log("Error al sincronizar con Pagos Reportados: " + err);
+  }
+}
+
+/**
+ * Sincroniza el despacho y logística en la pestaña "Inventario y Despachos"
+ */
+function recordDispatchInInventorySheet(body) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let invSheet = ss.getSheetByName(INVENTORY_SHEET_NAME);
+    if (!invSheet) {
+      initializeAllRequiredSheets();
+      invSheet = ss.getSheetByName(INVENTORY_SHEET_NAME);
+    }
+    if (!invSheet) return;
+
+    const code = String(body.code || "").trim();
+    if (!code) return;
+
+    const lastRow = invSheet.getLastRow();
+    let rowIndex = -1;
+
+    if (lastRow > 1) {
+      const codeValues = invSheet.getRange(2, 2, lastRow - 1, 1).getValues();
+      for (let i = 0; i < codeValues.length; i++) {
+        if (String(codeValues[i][0]).trim() === code) {
+          rowIndex = i + 2;
+          break;
+        }
+      }
+    }
+
+    const kitQty = Number(body.kitQuantity || 0);
+    const aficheQty = Number(body.aficheQuantity || 0);
+    const guiaQty = Number(body.guiaQuantity || 0);
+    const hojaQty = Number(body.hojaQuantity || 0);
+    const totalQty = Number(body.totalQuantity || (kitQty + aficheQty + guiaQty + hojaQty));
+
+    const dispatchRowData = [
+      body.timestamp || Utilities.formatDate(new Date(), "America/Caracas", "dd/MM/yyyy HH:mm"),
+      code,
+      body.institutionType || "Parroquia",
+      body.institutionName || "",
+      body.contactName || "",
+      body.phone ? "'" + String(body.phone).replace(/^'/, "") : "",
+      kitQty,
+      aficheQty,
+      guiaQty,
+      hojaQty,
+      totalQty,
+      body.deliveryStatus || "Por Imprimir / En Caracas",
+      body.deliveryDate || "",
+      "Sede Arquidiócesis de Maracaibo",
+      body.notes || ""
+    ];
+
+    if (rowIndex > 1) {
+      invSheet.getRange(rowIndex, 1, 1, 15).setValues([dispatchRowData]);
+    } else {
+      invSheet.appendRow(dispatchRowData);
+    }
+  } catch (err) {
+    Logger.log("Error al sincronizar con Inventario y Despachos: " + err);
+  }
+}
+
+/**
+ * Registra un evento en la pestaña "Historial y Auditoría"
+ */
+function recordAuditLog(operator, action, code, detail) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let auditSheet = ss.getSheetByName(AUDIT_SHEET_NAME);
+    if (!auditSheet) {
+      initializeAllRequiredSheets();
+      auditSheet = ss.getSheetByName(AUDIT_SHEET_NAME);
+    }
+    if (!auditSheet) return;
+
+    auditSheet.appendRow([
+      Utilities.formatDate(new Date(), "America/Caracas", "dd/MM/yyyy HH:mm:ss"),
+      operator || "Usuario Pastoral",
+      action,
+      code || "N/A",
+      detail || "",
+      "CRM Web"
+    ]);
+  } catch (err) {}
+}
+
+/**
+ * Endpoint GET: Devuelve reservas, usuarios, pagos o estado de configuración
  */
 function doGet(e) {
   try {
     const sheetParam = (e && e.parameter && e.parameter.sheet) ? String(e.parameter.sheet).toLowerCase() : "reservas";
+
+    // Si se solicita verificación o inicialización de hojas vía GET
+    if (sheetParam === "setup" || sheetParam === "init" || sheetParam === "check_sheets") {
+      const initResult = initializeAllRequiredSheets();
+      return createJsonResponse(initResult);
+    }
 
     // Consulta de Usuarios
     if (sheetParam === "users" || sheetParam === "usuarios") {
@@ -105,7 +444,7 @@ function doGet(e) {
       return createJsonResponse({ status: "success", count: 0, data: [] });
     }
 
-    const values = sheet.getRange(2, 1, lastRow - 1, Math.max(lastCol, 20)).getValues();
+    const values = sheet.getRange(2, 1, lastRow - 1, Math.max(lastCol, 22)).getValues();
 
     const reservations = values.map(function (row, index) {
       return {
@@ -127,9 +466,11 @@ function doGet(e) {
         paymentStatus: String(row[14] || "Pendiente"),
         paymentMethod: String(row[15] || ""),
         paymentRef: String(row[16] || ""),
-        deliveryStatus: String(row[17] || "Por Imprimir / En Caracas"),
-        deliveryDate: row[18] instanceof Date ? Utilities.formatDate(row[18], "America/Caracas", "dd/MM/yyyy") : String(row[18] || ""),
-        notes: String(row[19] || "")
+        paymentDate: row[17] instanceof Date ? Utilities.formatDate(row[17], "America/Caracas", "yyyy-MM-dd") : String(row[17] || ""),
+        paymentReceipt: String(row[18] || ""),
+        deliveryStatus: String(row[19] || "Por Imprimir / En Caracas"),
+        deliveryDate: row[20] instanceof Date ? Utilities.formatDate(row[20], "America/Caracas", "dd/MM/yyyy") : String(row[20] || ""),
+        notes: String(row[21] || "")
       };
     }).filter(function (item) {
       return item.code !== "";
@@ -146,7 +487,7 @@ function doGet(e) {
 }
 
 /**
- * Endpoint POST: Maneja LOGIN, CREATE, UPDATE, DELETE y sincronización
+ * Endpoint POST: Maneja SETUP_SHEETS, LOGIN, CREATE, UPDATE, DELETE y sincronización
  */
 function doPost(e) {
   try {
@@ -165,7 +506,20 @@ function doPost(e) {
     const action = String(body.action || "CREATE").toUpperCase();
 
     // ==========================================
-    // 0. ACCIÓN: AUTENTICACIÓN / LOGIN DE USUARIOS
+    // 0. ACCIÓN: SETUP_SHEETS (Crear hojas faltantes)
+    // ==========================================
+    if (action === "SETUP_SHEETS" || action === "INIT_SHEETS") {
+      const result = initializeAllRequiredSheets();
+      recordAuditLog(body.operator || "Administrador", "SETUP_SHEETS", "GLOBAL", "Hojas creadas o verificadas exitosamente");
+      return createJsonResponse({
+        status: "success",
+        action: "SETUP_SHEETS",
+        ...result
+      });
+    }
+
+    // ==========================================
+    // 1. ACCIÓN: AUTENTICACIÓN / LOGIN DE USUARIOS
     // ==========================================
     if (action === "LOGIN") {
       const emailOrUser = String(body.emailOrUser || "").trim().toLowerCase();
@@ -235,6 +589,7 @@ function doPost(e) {
       try {
         const nowString = Utilities.formatDate(new Date(), "America/Caracas", "dd/MM/yyyy HH:mm:ss");
         usersSheet.getRange(userRowIndex, 6).setValue(nowString);
+        recordAuditLog(authenticatedUser.name, "LOGIN", "N/A", "Inicio de sesión exitoso");
       } catch (logErr) {}
 
       return createJsonResponse({
@@ -274,6 +629,7 @@ function doPost(e) {
         return createJsonResponse({ status: "not_found", message: "Reserva no encontrada para eliminar" });
       }
       sheet.deleteRow(rowIndex);
+      recordAuditLog(body.operator || "Operador", "DELETE", code, "Reserva eliminada del sistema");
       return createJsonResponse({ status: "success", action: "DELETE", code: code });
     }
 
@@ -283,7 +639,7 @@ function doPost(e) {
         return createJsonResponse({ status: "not_found", message: "Reserva no encontrada para actualizar" });
       }
 
-      const currentRow = sheet.getRange(rowIndex, 1, 1, 20).getValues()[0];
+      const currentRow = sheet.getRange(rowIndex, 1, 1, 22).getValues()[0];
 
       const updatedRow = [
         body.timestamp !== undefined ? body.timestamp : currentRow[0],
@@ -303,12 +659,20 @@ function doPost(e) {
         body.paymentStatus !== undefined ? body.paymentStatus : currentRow[14],
         body.paymentMethod !== undefined ? body.paymentMethod : currentRow[15],
         body.paymentRef !== undefined ? body.paymentRef : currentRow[16],
-        body.deliveryStatus !== undefined ? body.deliveryStatus : currentRow[17],
-        body.deliveryDate !== undefined ? body.deliveryDate : currentRow[18],
-        body.notes !== undefined ? body.notes : currentRow[19]
+        body.paymentDate !== undefined ? body.paymentDate : (currentRow[17] || ""),
+        body.paymentReceipt !== undefined ? body.paymentReceipt : (currentRow[18] || ""),
+        body.deliveryStatus !== undefined ? body.deliveryStatus : currentRow[19],
+        body.deliveryDate !== undefined ? body.deliveryDate : currentRow[20],
+        body.notes !== undefined ? body.notes : currentRow[21]
       ];
 
-      sheet.getRange(rowIndex, 1, 1, 20).setValues([updatedRow]);
+      sheet.getRange(rowIndex, 1, 1, 22).setValues([updatedRow]);
+
+      // Sincronizar automáticamente en las hojas relacionadas (Pagos e Inventario)
+      recordPaymentInPaymentsSheet({ ...body, code: code });
+      recordDispatchInInventorySheet({ ...body, code: code });
+      recordAuditLog(body.operator || "Operador", "UPDATE", code, "Actualización: Pago=" + (body.paymentStatus || "N/A") + ", Entrega=" + (body.deliveryStatus || "N/A"));
+
       return createJsonResponse({ status: "success", action: "UPDATE", code: code });
     }
 
@@ -339,14 +703,22 @@ function doPost(e) {
       Number(body.totalEUR || 0),
       body.status || "Nueva Reserva",
       body.paymentStatus || "Pendiente",
-      body.paymentMethod || "",
+      body.paymentMethod || "Pago Móvil",
       body.paymentRef || "",
+      body.paymentDate || "",
+      body.paymentReceipt || "",
       body.deliveryStatus || "Por Imprimir / En Caracas",
       body.deliveryDate || "",
       body.notes || ""
     ];
 
     sheet.appendRow(newRow);
+
+    // Sincronizar automáticamente en las hojas de Pagos Reportados e Inventario
+    recordPaymentInPaymentsSheet(body);
+    recordDispatchInInventorySheet(body);
+    recordAuditLog(body.operator || "Público/Operador", "CREATE", code, "Nueva reserva registrada por " + (body.institutionName || ""));
+
     return createJsonResponse({ status: "success", action: "CREATE", code: code });
 
   } catch (error) {

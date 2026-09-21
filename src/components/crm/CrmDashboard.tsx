@@ -12,7 +12,8 @@ import {
   ExternalLink,
   ChevronDown,
   LogOut,
-  UserCheck
+  UserCheck,
+  Layers
 } from 'lucide-react';
 import {
   CrmReservation,
@@ -34,6 +35,7 @@ import { CrmCharts } from './CrmCharts';
 import { CrmEditModal } from './CrmEditModal';
 import { CrmCreateModal } from './CrmCreateModal';
 import { CrmExecutivePdfReport } from './CrmExecutivePdfReport';
+import { CrmSheetsSetupModal } from './CrmSheetsSetupModal';
 
 interface CrmDashboardProps {
   onBackToPublicSite: () => void;
@@ -61,6 +63,7 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
   const [editingReservation, setEditingReservation] = useState<CrmReservation | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [isSheetsSetupModalOpen, setIsSheetsSetupModalOpen] = useState(false);
   const [deletingCode, setDeletingCode] = useState<string | null>(null);
 
   // Toast
@@ -411,6 +414,16 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
               <RefreshCw className={`w-4 h-4 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
             </button>
 
+            {/* Botón Pestañas / Hojas Google Sheets */}
+            <button
+              onClick={() => setIsSheetsSetupModalOpen(true)}
+              className="h-9 px-3 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-xs font-bold text-stone-700 inline-flex items-center gap-1.5 transition-colors shadow-2xs shrink-0 whitespace-nowrap"
+              title="Verificar y crear pestañas faltantes en Google Sheets (Pagos, Inventario, Usuarios, Auditoría)"
+            >
+              <Layers className="w-3.5 h-3.5 text-amber-700" />
+              <span>Hojas Sheets</span>
+            </button>
+
             {/* Botón Exportar CSV */}
             <button
               onClick={handleExportCSV}
@@ -508,19 +521,27 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
           </div>
 
           {/* Acciones principales en móvil con altura y estilo uniforme */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setIsSheetsSetupModalOpen(true)}
+              className="h-8.5 w-8.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 flex items-center justify-center shadow-2xs transition-all shrink-0"
+              title="Crear o verificar hojas en Google Sheets"
+            >
+              <Layers className="w-4 h-4 text-amber-800" />
+            </button>
+
             <button
               onClick={() => setIsPdfModalOpen(true)}
-              className="h-8.5 px-3 rounded-lg border border-amber-200/90 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-xs font-bold text-amber-900 inline-flex items-center gap-1.5 shadow-2xs transition-all shrink-0"
+              className="h-8.5 px-2.5 rounded-lg border border-amber-200/90 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-xs font-bold text-amber-900 inline-flex items-center gap-1 shadow-2xs transition-all shrink-0"
               title="Descargar Reporte PDF"
             >
               <FileText className="w-3.5 h-3.5 text-amber-800" />
-              <span>Reporte PDF</span>
+              <span className="hidden xs:inline">PDF</span>
             </button>
 
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="h-8.5 px-3.5 rounded-lg bg-amber-700 hover:bg-amber-800 active:bg-amber-900 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-xs transition-all shrink-0"
+              className="h-8.5 px-3 rounded-lg bg-amber-700 hover:bg-amber-800 active:bg-amber-900 text-white text-xs font-bold inline-flex items-center gap-1 shadow-xs transition-all shrink-0"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>+ Reserva</span>
@@ -838,6 +859,17 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
         reservations={reservations}
         kpis={kpis}
         currentUser={currentUser}
+      />
+
+      {/* Modal de Estructura Multi-Hojas en Google Sheets */}
+      <CrmSheetsSetupModal
+        isOpen={isSheetsSetupModalOpen}
+        onClose={() => setIsSheetsSetupModalOpen(false)}
+        operatorName={currentUser?.name || 'Administrador Pastoral'}
+        onSuccess={(msg) => {
+          showToast(msg, 'success');
+          loadData(false, false);
+        }}
       />
 
       {/* Diálogo de Confirmación de Eliminación */}

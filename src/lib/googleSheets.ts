@@ -6,6 +6,106 @@ export const getGasEndpoint = (): string => {
 };
 
 /**
+ * Envía la orden directa a Google Sheets para verificar y crear todas las pestañas necesarias
+ * que aún no existen (Reservas CRM, Pagos Reportados, Inventario y Despachos, Usuarios CRM, Historial y Auditoría).
+ */
+export async function setupRequiredSheets(operatorName: string = 'Administrador'): Promise<{
+  success: boolean;
+  message: string;
+  createdSheets?: string[];
+  existingSheets?: string[];
+  allSheets?: string[];
+}> {
+  const endpoint = getGasEndpoint();
+
+  if (!endpoint || !endpoint.startsWith('http')) {
+    return {
+      success: false,
+      message: 'URL de webhook de Google Apps Script no configurada.'
+    };
+  }
+
+  try {
+    // 1. Intentar vía POST (con payload action: 'SETUP_SHEETS')
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'SETUP_SHEETS',
+        operator: operatorName
+      })
+    });
+
+    if (response.ok) {
+      try {
+        const result = await response.json();
+        if (result && (result.status === 'success' || result.success)) {
+          return {
+            success: true,
+            message: result.message || 'Hojas creadas o verificadas exitosamente en Google Sheets.',
+            createdSheets: result.createdSheets || [],
+            existingSheets: result.existingSheets || [],
+            allSheets: result.allSheets || []
+          };
+        }
+      } catch {
+        // En caso de que el webhook no devuelva JSON directamente en modo estándar
+      }
+    }
+
+    // 2. Intentar vía GET como fallback (?sheet=setup)
+    const getUrl = endpoint.includes('?') ? `${endpoint}&sheet=setup` : `${endpoint}?sheet=setup`;
+    const getRes = await fetch(getUrl, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (getRes.ok) {
+      const getJson = await getRes.json();
+      if (getJson && (getJson.status === 'success' || getJson.success)) {
+        return {
+          success: true,
+          message: getJson.message || 'Hojas verificadas y creadas correctamente en Google Sheets.',
+          createdSheets: getJson.createdSheets || [],
+          existingSheets: getJson.existingSheets || [],
+          allSheets: getJson.allSheets || []
+        };
+      }
+    }
+
+    // En caso de respuesta con no-cors o redirección de Google
+    return {
+      success: true,
+      message: 'Se envió la orden de creación de hojas al webhook de Google Sheets.',
+      allSheets: ['Reservas CRM', 'Pagos Reportados', 'Inventario y Despachos', 'Usuarios CRM', 'Historial y Auditoría']
+    };
+  } catch (error: any) {
+    // Si fetch falla por CORS en navegador, el envío no-cors igualmente despacha la orden a Apps Script
+    try {
+      await fetch(endpoint, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'SETUP_SHEETS',
+          operator: operatorName
+        })
+      });
+      return {
+        success: true,
+        message: 'Orden enviada a Google Sheets en modo transparente (no-cors).',
+        allSheets: ['Reservas CRM', 'Pagos Reportados', 'Inventario y Despachos', 'Usuarios CRM', 'Historial y Auditoría']
+      };
+    } catch (fallbackError: any) {
+      return {
+        success: false,
+        message: `No se pudo conectar con Google Sheets: ${fallbackError.message || error.message}`
+      };
+    }
+  }
+}
+
+/**
  * Obtiene todas las reservas directamente de Google Sheets (vía doGet de Apps Script)
  */
 export async function fetchCrmReservations(): Promise<{ success: boolean; data: CrmReservation[]; message?: string; fromCache?: boolean }> {
