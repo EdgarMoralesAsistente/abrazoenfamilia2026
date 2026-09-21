@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, RefreshCw } from 'lucide-react';
+import { X, Plus, RefreshCw, Calendar, Image as ImageIcon, Upload, Trash2, Eye, FileCheck } from 'lucide-react';
 import { CrmReservation, ReservationType } from '../../types/reservation';
 import { MARACAIBO_PARISHES, MARACAIBO_SCHOOLS } from '../../data/parishes';
 import { InternationalPhoneInput } from '../InternationalPhoneInput';
@@ -25,10 +25,54 @@ export const CrmCreateModal: React.FC<CrmCreateModalProps> = ({
   const [guiaQuantity, setGuiaQuantity] = useState<number>(0);
   const [hojaQuantity, setHojaQuantity] = useState<number>(0);
   const [paymentStatus, setPaymentStatus] = useState<'Pendiente' | 'Pagado' | 'Verificando'>('Pendiente');
-  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Pago Móvil');
   const [paymentRef, setPaymentRef] = useState('');
+  const [paymentDate, setPaymentDate] = useState('');
+  const [paymentReceipt, setPaymentReceipt] = useState('');
+  const [isDraggingReceipt, setIsDraggingReceipt] = useState(false);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Subir imagen de comprobante en creación
+  const handleReceiptUpload = (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen válido (JPG, PNG, WEBP, etc.)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.createElement('img');
+      img.onload = () => {
+        const maxDim = 1200;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setPaymentReceipt(dataUrl);
+        } else {
+          setPaymentReceipt(e.target?.result as string);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   if (!isOpen) return null;
 
@@ -81,8 +125,10 @@ export const CrmCreateModal: React.FC<CrmCreateModalProps> = ({
         totalEUR,
         status: 'Nueva Reserva',
         paymentStatus,
-        paymentMethod,
+        paymentMethod: paymentMethod || 'Pago Móvil',
         paymentRef,
+        paymentDate,
+        paymentReceipt,
         deliveryStatus: 'Por Imprimir / En Caracas',
         deliveryDate: '',
         notes
@@ -279,39 +325,146 @@ export const CrmCreateModal: React.FC<CrmCreateModalProps> = ({
             </div>
           </div>
 
-          {/* Estado de Pago Inicial */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <label className="font-bold text-stone-900 block">Estado del Pago</label>
-              <select
-                value={paymentStatus}
-                onChange={(e) => setPaymentStatus(e.target.value as any)}
-                className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 bg-white font-medium"
-              >
-                <option value="Pendiente">Pendiente</option>
-                <option value="Pagado">Pagado</option>
-                <option value="Verificando">Verificando</option>
-              </select>
+          {/* Datos y Comprobante de Pago */}
+          <div className="p-3.5 bg-stone-50/80 border border-stone-200/90 rounded-2xl space-y-3">
+            <span className="text-xs font-bold text-stone-900 uppercase tracking-wider block">
+              Datos y Comprobante de Pago
+            </span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <label className="font-bold text-stone-900 block">Estado del Pago</label>
+                <select
+                  value={paymentStatus}
+                  onChange={(e) => setPaymentStatus(e.target.value as any)}
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 bg-white font-medium shadow-2xs"
+                >
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Pagado">Pagado</option>
+                  <option value="Verificando">Verificando</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="font-bold text-stone-900 block">Método de Pago</label>
+                <select
+                  value={paymentMethod || 'Pago Móvil'}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 bg-white font-medium shadow-2xs cursor-pointer"
+                >
+                  <option value="Pago Móvil">Pago Móvil</option>
+                  <option value="Efectivo (Divisas)">Efectivo (Divisas)</option>
+                  <option value="Zelle">Zelle</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="font-bold text-stone-900 block">Referencia</label>
+                <input
+                  type="text"
+                  placeholder="Referencia bancaria"
+                  value={paymentRef}
+                  onChange={(e) => setPaymentRef(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 font-mono shadow-2xs"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="font-bold text-stone-900 block">Método de Pago</label>
-              <input
-                type="text"
-                placeholder="Ej. Transferencia, Pago Móvil"
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="font-bold text-stone-900 block">Referencia</label>
-              <input
-                type="text"
-                placeholder="Referencia bancaria"
-                value={paymentRef}
-                onChange={(e) => setPaymentRef(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 font-mono"
-              />
+
+            {/* Fecha del Pago y Comprobante */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div className="space-y-1.5">
+                <label className="font-bold text-stone-900 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-stone-500" />
+                  <span>Fecha del Pago</span>
+                </label>
+                <input
+                  type="date"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 bg-white font-medium shadow-2xs"
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="font-bold text-stone-900 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-stone-500" />
+                    <span>Comprobante de pago</span>
+                  </span>
+                  {paymentReceipt && (
+                    <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
+                      <FileCheck className="w-3 h-3" />
+                      Adjunto listo
+                    </span>
+                  )}
+                </label>
+
+                {!paymentReceipt ? (
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDraggingReceipt(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      setIsDraggingReceipt(false);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDraggingReceipt(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        handleReceiptUpload(e.dataTransfer.files[0]);
+                      }
+                    }}
+                    onClick={() => {
+                      const input = document.getElementById('receipt-file-input-create');
+                      input?.click();
+                    }}
+                    className={`border-2 border-dashed rounded-xl p-3 text-center transition-all cursor-pointer ${
+                      isDraggingReceipt
+                        ? 'border-amber-600 bg-amber-50/70'
+                        : 'border-stone-300 hover:border-amber-600 bg-white hover:bg-amber-50/30'
+                    }`}
+                  >
+                    <input
+                      id="receipt-file-input-create"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleReceiptUpload(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    <div className="flex items-center justify-center gap-2">
+                      <Upload className="w-4 h-4 text-amber-800 shrink-0" />
+                      <span className="text-xs font-bold text-stone-900">
+                        Subir imagen del comprobante (JPG, PNG)
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-white border border-stone-200 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <img
+                        src={paymentReceipt}
+                        alt="Comprobante de pago"
+                        className="w-10 h-10 object-cover rounded-lg border border-stone-200 shrink-0"
+                      />
+                      <span className="text-xs font-bold text-stone-900 truncate">
+                        Comprobante listo
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentReceipt('')}
+                      className="p-1 rounded-lg border border-red-200 hover:bg-red-50 text-red-700 text-xs font-bold transition-colors"
+                      title="Quitar imagen"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

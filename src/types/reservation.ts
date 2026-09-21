@@ -25,6 +25,8 @@ export interface CrmReservation {
   paymentStatus: PaymentStatus;
   paymentMethod: string;
   paymentRef: string;
+  paymentDate?: string;
+  paymentReceipt?: string;
   deliveryStatus: DeliveryStatus;
   deliveryDate: string;
   notes: string;

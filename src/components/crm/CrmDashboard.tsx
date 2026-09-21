@@ -712,11 +712,21 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
                           <span className="font-black text-stone-900 text-sm block">
                             {Number(res.totalEUR).toFixed(2)} €
                           </span>
-                          {res.paymentRef && (
-                            <span className="text-[10px] text-stone-700 font-mono block truncate max-w-[100px]" title={res.paymentRef}>
-                              Ref: {res.paymentRef}
-                            </span>
-                          )}
+                          <span className="text-[10px] font-bold text-stone-600 block truncate max-w-[120px]">
+                            {res.paymentMethod || 'Pago Móvil'}
+                          </span>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {res.paymentDate && (
+                              <span className="text-[10px] text-stone-700 font-mono">
+                                {res.paymentDate}
+                              </span>
+                            )}
+                            {res.paymentReceipt && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-emerald-50 text-[10px] font-bold text-emerald-700 border border-emerald-200" title="Comprobante de pago adjunto">
+                                📷 Recibo
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* Selector rápido: Estado Reserva */}

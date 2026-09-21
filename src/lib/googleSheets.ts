@@ -55,6 +55,8 @@ export async function fetchCrmReservations(): Promise<{ success: boolean; data: 
         paymentStatus: (row.paymentStatus || 'Pendiente') as any,
         paymentMethod: row.paymentMethod || '',
         paymentRef: row.paymentRef || '',
+        paymentDate: row.paymentDate || '',
+        paymentReceipt: row.paymentReceipt || row.paymentReceiptUrl || '',
         deliveryStatus: (row.deliveryStatus || 'Por Imprimir / En Caracas') as any,
         deliveryDate: row.deliveryDate || '',
         notes: row.notes || ''

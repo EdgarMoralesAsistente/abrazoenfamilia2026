@@ -21,7 +21,13 @@ import {
   ExternalLink,
   ShieldCheck,
   CreditCard,
-  AlertCircle
+  AlertCircle,
+  Calendar,
+  Image as ImageIcon,
+  Upload,
+  Trash2,
+  Eye,
+  FileCheck
 } from 'lucide-react';
 import { CrmReservation, ReservationStatus, PaymentStatus, DeliveryStatus } from '../../types/reservation';
 import { formatPhoneForWhatsApp } from '../../utils/phoneUtils';
@@ -54,12 +60,58 @@ export const CrmEditModal: React.FC<CrmEditModalProps> = ({
   const [activeTab, setActiveTab] = useState<ActiveTab>('gestion');
   const [status, setStatus] = useState<ReservationStatus>('Nueva Reserva');
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('Pendiente');
-  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Pago Móvil');
   const [paymentRef, setPaymentRef] = useState('');
+  const [paymentDate, setPaymentDate] = useState('');
+  const [paymentReceipt, setPaymentReceipt] = useState('');
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isDraggingReceipt, setIsDraggingReceipt] = useState(false);
   const [deliveryStatus, setDeliveryStatus] = useState<DeliveryStatus>('Por Imprimir / En Caracas');
   const [deliveryDate, setDeliveryDate] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Subir o procesar imagen del comprobante de pago
+  const handleReceiptUpload = (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen válido (JPG, PNG, WEBP, etc.)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.createElement('img');
+      img.onload = () => {
+        // Redimensionar suavemente a un máximo de 1200px para garantizar rendimiento y persistencia ágil
+        const maxDim = 1200;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setPaymentReceipt(dataUrl);
+        } else {
+          setPaymentReceipt(e.target?.result as string);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Estados para WhatsApp
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('confirmacion');
@@ -255,8 +307,10 @@ export const CrmEditModal: React.FC<CrmEditModalProps> = ({
     if (reservation) {
       setStatus(reservation.status || 'Nueva Reserva');
       setPaymentStatus(reservation.paymentStatus || 'Pendiente');
-      setPaymentMethod(reservation.paymentMethod || '');
+      setPaymentMethod(reservation.paymentMethod || 'Pago Móvil');
       setPaymentRef(reservation.paymentRef || '');
+      setPaymentDate(reservation.paymentDate || '');
+      setPaymentReceipt(reservation.paymentReceipt || '');
       setDeliveryStatus(reservation.deliveryStatus || 'Por Imprimir / En Caracas');
       setDeliveryDate(reservation.deliveryDate || '');
       setNotes(reservation.notes || '');
@@ -288,8 +342,10 @@ export const CrmEditModal: React.FC<CrmEditModalProps> = ({
       await onSave(reservation.code, {
         status,
         paymentStatus,
-        paymentMethod,
+        paymentMethod: paymentMethod || 'Pago Móvil',
         paymentRef,
+        paymentDate,
+        paymentReceipt,
         deliveryStatus,
         deliveryDate,
         notes
@@ -495,32 +551,208 @@ export const CrmEditModal: React.FC<CrmEditModalProps> = ({
                 </div>
               </div>
 
-              {/* Método y Referencia de Pago */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="font-bold text-stone-900 block">
-                    Método de Pago Reportado
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Pago Móvil BNC, Transferencia, Efectivo Divisas"
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 shadow-2xs"
-                  />
+              {/* Método, Referencia, Fecha y Comprobante de Pago */}
+              <div className="p-3.5 bg-stone-50/80 border border-stone-200/90 rounded-2xl space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-stone-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Datos y Comprobante de Pago</span>
+                  </span>
+                  {paymentReceipt && (
+                    <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-200/80 flex items-center gap-1">
+                      <FileCheck className="w-3 h-3 text-emerald-700" />
+                      Comprobante Adjunto
+                    </span>
+                  )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="font-bold text-stone-900 block">
-                    Número de Referencia Bancaria
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* 1. Método de Pago (Casilla de selección única) */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="crm-payment-method" className="font-bold text-stone-900 block">
+                      Método de Pago
+                    </label>
+                    <select
+                      id="crm-payment-method"
+                      value={paymentMethod || 'Pago Móvil'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 bg-white font-medium shadow-2xs cursor-pointer"
+                    >
+                      <option value="Pago Móvil">Pago Móvil</option>
+                      <option value="Efectivo (Divisas)">Efectivo (Divisas)</option>
+                      <option value="Zelle">Zelle</option>
+                      {paymentMethod && !['Pago Móvil', 'Efectivo (Divisas)', 'Zelle'].includes(paymentMethod) && (
+                        <option value={paymentMethod}>{paymentMethod}</option>
+                      )}
+                    </select>
+                  </div>
+
+                  {/* 2. Número de Referencia Bancaria */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="crm-payment-ref" className="font-bold text-stone-900 block">
+                      Número de Referencia Bancaria
+                    </label>
+                    <input
+                      id="crm-payment-ref"
+                      type="text"
+                      placeholder="Ej. Ref # 10482931"
+                      value={paymentRef}
+                      onChange={(e) => setPaymentRef(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 font-mono shadow-2xs"
+                    />
+                  </div>
+
+                  {/* 3. Fecha del Pago */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="crm-payment-date" className="font-bold text-stone-900 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-stone-500" />
+                      <span>Fecha del Pago</span>
+                    </label>
+                    <input
+                      id="crm-payment-date"
+                      type="date"
+                      value={paymentDate}
+                      onChange={(e) => setPaymentDate(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 bg-white font-medium shadow-2xs"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. Comprobante de pago: subir una imagen */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="font-bold text-stone-900 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-stone-500" />
+                      <span>Comprobante de pago</span>
+                    </span>
+                    <span className="text-[11px] text-stone-500 font-normal">
+                      Subir una imagen del comprobante de pago
+                    </span>
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Ref # 10482931"
-                    value={paymentRef}
-                    onChange={(e) => setPaymentRef(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-hidden focus:border-amber-700 font-mono shadow-2xs"
-                  />
+
+                  {!paymentReceipt ? (
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDraggingReceipt(true);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        setIsDraggingReceipt(false);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDraggingReceipt(false);
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          handleReceiptUpload(e.dataTransfer.files[0]);
+                        }
+                      }}
+                      onClick={() => {
+                        const input = document.getElementById('receipt-file-input-edit');
+                        input?.click();
+                      }}
+                      className={`border-2 border-dashed rounded-xl p-3.5 sm:p-4 text-center transition-all cursor-pointer ${
+                        isDraggingReceipt
+                          ? 'border-amber-600 bg-amber-50/70'
+                          : 'border-stone-300 hover:border-amber-600 bg-white hover:bg-amber-50/30'
+                      }`}
+                    >
+                      <input
+                        id="receipt-file-input-edit"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleReceiptUpload(e.target.files[0]);
+                          }
+                        }}
+                      />
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                          <Upload className="w-4 h-4" />
+                        </div>
+                        <div className="text-center sm:text-left">
+                          <span className="text-xs font-bold text-stone-900 block">
+                            Haz clic para seleccionar o arrastra la imagen aquí
+                          </span>
+                          <span className="text-[11px] text-stone-500 block">
+                            Formatos: JPG, PNG, WEBP (Captura de Pago Móvil, transferencia o depósito)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-white border border-stone-200 rounded-xl shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <button
+                          type="button"
+                          onClick={() => setIsReceiptModalOpen(true)}
+                          className="relative group shrink-0 overflow-hidden rounded-lg border border-stone-200 w-14 h-14 bg-stone-100 flex items-center justify-center cursor-pointer"
+                          title="Ampliar comprobante"
+                        >
+                          <img
+                            src={paymentReceipt}
+                            alt="Comprobante de pago"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                            <Eye className="w-4 h-4" />
+                          </div>
+                        </button>
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-stone-900 block truncate">
+                            Comprobante cargado correctamente
+                          </span>
+                          <span className="text-[11px] text-emerald-700 font-semibold block">
+                            {paymentMethod || 'Pago Móvil'} {paymentDate ? `· Fecha: ${paymentDate}` : ''}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsReceiptModalOpen(true)}
+                            className="text-[11px] text-amber-800 hover:text-amber-900 font-bold inline-flex items-center gap-1 mt-0.5 hover:underline"
+                          >
+                            <Eye className="w-3 h-3" />
+                            Ver imagen completa
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center w-full sm:w-auto justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById('receipt-file-input-edit');
+                            input?.click();
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg border border-stone-300 hover:bg-stone-100 text-stone-700 text-xs font-bold transition-colors inline-flex items-center gap-1"
+                        >
+                          <Upload className="w-3 h-3" />
+                          <span>Cambiar</span>
+                        </button>
+                        <input
+                          id="receipt-file-input-edit"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleReceiptUpload(e.target.files[0]);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPaymentReceipt('')}
+                          className="px-2.5 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 text-red-700 text-xs font-bold transition-colors inline-flex items-center gap-1"
+                          title="Eliminar comprobante"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Quitar</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -923,6 +1155,48 @@ export const CrmEditModal: React.FC<CrmEditModalProps> = ({
           </div>
         </form>
       </div>
+      {/* Lightbox / Modal para ver el comprobante en alta resolución */}
+      {isReceiptModalOpen && paymentReceipt && (
+        <div className="fixed inset-0 z-60 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="relative max-w-2xl w-full max-h-[90vh] bg-stone-900 rounded-2xl overflow-hidden shadow-2xl flex flex-col border border-stone-700">
+            <div className="p-3 sm:p-4 bg-stone-900 border-b border-stone-800 flex items-center justify-between text-white">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-amber-400" />
+                <span className="font-bold text-xs sm:text-sm truncate">
+                  Comprobante: {reservation.code} — {reservation.institutionName}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReceiptModalOpen(false)}
+                className="p-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white transition-colors"
+                title="Cerrar vista"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-stone-950/70">
+              <img
+                src={paymentReceipt}
+                alt={`Comprobante de pago ${reservation.code}`}
+                className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+              />
+            </div>
+            <div className="p-3 bg-stone-900 border-t border-stone-800 flex flex-wrap items-center justify-between gap-2 text-xs text-stone-400">
+              <span>
+                {paymentMethod || 'Pago Móvil'} {paymentRef ? `· Ref: ${paymentRef}` : ''} {paymentDate ? `· Fecha: ${paymentDate}` : ''}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsReceiptModalOpen(false)}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
