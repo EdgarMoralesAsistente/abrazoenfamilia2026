@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   X,
   FileCode,
-  ArrowRight
+  ArrowRight,
+  DollarSign
 } from 'lucide-react';
 import { setupRequiredSheets } from '../../lib/googleSheets';
 
@@ -56,6 +57,13 @@ export const CrmSheetsSetupModal: React.FC<CrmSheetsSetupModalProps> = ({
       icon: CreditCard,
       color: 'bg-emerald-100 text-emerald-900 border-emerald-200',
       badge: 'Finanzas'
+    },
+    {
+      name: 'Cartera de Dólares',
+      desc: 'Registro de compra de divisas USD con Bolívares para proteger el poder adquisitivo ante la devaluación.',
+      icon: DollarSign,
+      color: 'bg-emerald-100 text-emerald-950 border-emerald-300',
+      badge: 'Divisas'
     },
     {
       name: 'Inventario y Despachos',

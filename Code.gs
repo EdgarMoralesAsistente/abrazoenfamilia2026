@@ -9,6 +9,7 @@
 const SHEET_NAME = "Reservas CRM";
 const USERS_SHEET_NAME = "Usuarios CRM";
 const PAYMENTS_SHEET_NAME = "Pagos Reportados";
+const USD_WALLET_SHEET_NAME = "Cartera de Dólares";
 const INVENTORY_SHEET_NAME = "Inventario y Despachos";
 const AUDIT_SHEET_NAME = "Historial y Auditoría";
 
@@ -167,7 +168,35 @@ function initializeAllRequiredSheets() {
   }
 
   // ==========================================
-  // 3. Hoja "Inventario y Despachos"
+  // 3. Hoja "Cartera de Dólares" (Divisas / Anti-Devaluación)
+  // ==========================================
+  let walletSheet = ss.getSheetByName(USD_WALLET_SHEET_NAME);
+  if (!walletSheet) {
+    walletSheet = ss.insertSheet(USD_WALLET_SHEET_NAME);
+    walletSheet.appendRow([
+      "Fecha y Hora",
+      "Código Operación",
+      "Dólares Comprados ($ USD)",
+      "Tasa de Cambio (Bs/USD)",
+      "Total Bolívares Egresados (Bs.)",
+      "Cuenta Origen (Bs.)",
+      "Destino / Custodia (USD)",
+      "Nro. Referencia / Recibo",
+      "Responsable / Operador",
+      "Notas / Observaciones"
+    ]);
+    walletSheet.getRange(1, 1, 1, 10)
+      .setFontWeight("bold")
+      .setBackground("#047857") // Verde esmeralda tesorería
+      .setFontColor("#ffffff");
+    walletSheet.setFrozenRows(1);
+    createdSheets.push(USD_WALLET_SHEET_NAME);
+  } else {
+    existingSheets.push(USD_WALLET_SHEET_NAME);
+  }
+
+  // ==========================================
+  // 4. Hoja "Inventario y Despachos"
   // ==========================================
   let inventarioSheet = ss.getSheetByName(INVENTORY_SHEET_NAME);
   if (!inventarioSheet) {
@@ -250,7 +279,7 @@ function initializeAllRequiredSheets() {
     message: "Verificación y creación de hojas completada con éxito.",
     createdSheets: createdSheets,
     existingSheets: existingSheets,
-    allSheets: [SHEET_NAME, PAYMENTS_SHEET_NAME, INVENTORY_SHEET_NAME, USERS_SHEET_NAME, AUDIT_SHEET_NAME]
+    allSheets: [SHEET_NAME, PAYMENTS_SHEET_NAME, USD_WALLET_SHEET_NAME, INVENTORY_SHEET_NAME, USERS_SHEET_NAME, AUDIT_SHEET_NAME]
   };
 }
 
@@ -310,6 +339,54 @@ function recordPaymentInPaymentsSheet(body) {
     }
   } catch (err) {
     Logger.log("Error al sincronizar con Pagos Reportados: " + err);
+  }
+}
+
+/**
+ * Sincroniza o registra una compra de divisas en la pestaña "Cartera de Dólares"
+ */
+function recordDollarPurchaseInSheet(body) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(USD_WALLET_SHEET_NAME);
+    if (!sheet) {
+      initializeAllRequiredSheets();
+      sheet = ss.getSheetByName(USD_WALLET_SHEET_NAME);
+    }
+    if (!sheet) return;
+
+    const timestamp = body.timestamp || Utilities.formatDate(new Date(), "America/Caracas", "dd/MM/yyyy HH:mm:ss");
+    const id = String(body.id || "USD-" + Date.now());
+    const usdAmount = Number(body.usdAmount || 0);
+    const exchangeRate = Number(body.exchangeRate || 0);
+    const vesAmount = Number(body.vesAmount || (usdAmount * exchangeRate));
+    const origin = String(body.originAccount || "Pago Móvil / Banco");
+    const destination = String(body.destinationWallet || "Bóveda / Efectivo Divisas Pastoral");
+    const ref = String(body.reference || "");
+    const operator = String(body.operator || "Equipo Pastoral");
+    const notes = String(body.notes || "");
+
+    sheet.appendRow([
+      timestamp,
+      id,
+      usdAmount,
+      exchangeRate,
+      vesAmount,
+      origin,
+      destination,
+      ref,
+      operator,
+      notes
+    ]);
+
+    recordAuditLog(
+      operator,
+      "BUY_USD",
+      id,
+      "Compra de $" + usdAmount.toFixed(2) + " USD a tasa " + exchangeRate.toFixed(2) + " Bs/$ (-" + vesAmount.toFixed(2) + " Bs.)"
+    );
+  } catch (err) {
+    Logger.log("Error al registrar compra de dólares: " + err);
   }
 }
 
@@ -435,6 +512,38 @@ function doGet(e) {
       return createJsonResponse({ status: "success", count: users.length, data: users });
     }
 
+    // Consulta de Cartera de Dólares
+    if (sheetParam === "usd" || sheetParam === "cartera" || sheetParam === "dolares") {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      let walletSheet = ss.getSheetByName(USD_WALLET_SHEET_NAME);
+      if (!walletSheet) {
+        initializeAllRequiredSheets();
+        walletSheet = ss.getSheetByName(USD_WALLET_SHEET_NAME);
+      }
+      const lastRow = walletSheet.getLastRow();
+      if (lastRow <= 1) {
+        return createJsonResponse({ status: "success", count: 0, data: [] });
+      }
+
+      const rows = walletSheet.getRange(2, 1, lastRow - 1, 10).getValues();
+      const purchases = rows.map(function(r) {
+        return {
+          timestamp: String(r[0] || ""),
+          id: String(r[1] || ""),
+          usdAmount: Number(r[2] || 0),
+          exchangeRate: Number(r[3] || 0),
+          vesAmount: Number(r[4] || 0),
+          originAccount: String(r[5] || ""),
+          destinationWallet: String(r[6] || ""),
+          reference: String(r[7] || ""),
+          operator: String(r[8] || ""),
+          notes: String(r[9] || "")
+        };
+      }).filter(function(p) { return p.id !== ""; });
+
+      return createJsonResponse({ status: "success", count: purchases.length, data: purchases });
+    }
+
     // Consulta por defecto: Reservas
     const sheet = getTargetSheet();
     const lastRow = sheet.getLastRow();
@@ -515,6 +624,18 @@ function doPost(e) {
         status: "success",
         action: "SETUP_SHEETS",
         ...result
+      });
+    }
+
+    // ==========================================
+    // 0.5. ACCIÓN: REGISTRO DE COMPRA DE DÓLARES (CARTERA USD)
+    // ==========================================
+    if (action === "BUY_USD" || action === "RECORD_USD" || action === "RECORD_FX") {
+      recordDollarPurchaseInSheet(body);
+      return createJsonResponse({
+        status: "success",
+        action: "BUY_USD",
+        message: "Compra de divisas registrada exitosamente en Cartera de Dólares."
       });
     }
 

@@ -102,6 +102,17 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
   ];
   const maxMaterialCount = Math.max(...materialsList.map((m) => m.count), 1);
 
+  // Cartera de Dólares (Cobertura Cambiaria)
+  const wallet = kpis.walletSummary || {
+    totalUsdPurchased: 550,
+    totalVesSpent: 24460,
+    averageExchangeRate: 44.47,
+    lastExchangeRate: 44.80,
+    purchaseCount: 2,
+    totalVesCollectedEstimated: 35000,
+    availableVesBalance: 10540
+  };
+
   // Top 3 Instituciones con mayor volumen
   const instMap: Record<string, { name: string; type: string; piezas: number; monto: number }> = {};
   reservations.forEach((r) => {
@@ -309,18 +320,18 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
             {/* FILA 1: TARJETAS DE KPIS CON BARRAS DE PROGRESO */}
             {/* ============================================================== */}
             <section className="my-2.5">
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-6 gap-2">
                 {/* KPI 1: Total Reservas con Barra Hechas vs Pagadas */}
-                <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-stone-500 text-[9px] font-bold uppercase tracking-wider">
-                    <span>Total Reservas</span>
-                    <ShoppingCart className="w-3 h-3 text-amber-800" />
+                <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-stone-500 text-[8.5px] font-bold uppercase tracking-wider">
+                    <span>Reservas</span>
+                    <ShoppingCart className="w-2.5 h-2.5 text-amber-800" />
                   </div>
-                  <div className="my-1">
-                    <span className="text-xl font-black text-stone-900 block leading-none">
+                  <div className="my-0.5">
+                    <span className="text-lg font-black text-stone-900 block leading-none">
                       {kpis.totalReservas}
                     </span>
-                    <span className="text-[9px] font-bold text-emerald-800 block mt-0.5">
+                    <span className="text-[8.5px] font-bold text-emerald-800 block mt-0.5">
                       {pctReservasPagadas}% pagadas
                     </span>
                   </div>
@@ -331,23 +342,23 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
                         style={{ width: `${Math.min(pctReservasPagadas, 100)}%` }}
                       />
                     </div>
-                    <span className="text-[8.5px] text-stone-500 block mt-0.5 truncate font-medium">
-                      {kpis.reservasPagadas} pag. · {kpis.reservasPendientesPago} pend.
+                    <span className="text-[8px] text-stone-500 block mt-0.5 truncate font-medium">
+                      {kpis.reservasPagadas} pag · {kpis.reservasPendientesPago} pend
                     </span>
                   </div>
                 </div>
 
                 {/* KPI 2: Monto Total (€) con Barra Total vs Pagado */}
-                <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-stone-500 text-[9px] font-bold uppercase tracking-wider">
-                    <span>Monto Total (€)</span>
-                    <Euro className="w-3 h-3 text-emerald-700" />
+                <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-stone-500 text-[8.5px] font-bold uppercase tracking-wider">
+                    <span>Monto (€)</span>
+                    <Euro className="w-2.5 h-2.5 text-emerald-700" />
                   </div>
-                  <div className="my-1">
-                    <span className="text-xl font-black text-stone-900 block leading-none">
+                  <div className="my-0.5">
+                    <span className="text-base font-black text-stone-900 block leading-none truncate">
                       {kpis.totalMontoEUR.toFixed(2)} €
                     </span>
-                    <span className="text-[9px] font-bold text-emerald-800 block mt-0.5">
+                    <span className="text-[8.5px] font-bold text-emerald-800 block mt-0.5">
                       {pctMontoRecaudado}% recaudado
                     </span>
                   </div>
@@ -358,63 +369,89 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
                         style={{ width: `${Math.min(pctMontoRecaudadoNum, 100)}%` }}
                       />
                     </div>
-                    <span className="text-[8.5px] text-stone-500 block mt-0.5 truncate font-medium">
+                    <span className="text-[8px] text-stone-500 block mt-0.5 truncate font-medium">
                       {kpis.totalMontoRecaudadoEUR.toFixed(2)} € cobrado
                     </span>
                   </div>
                 </div>
 
-                {/* KPI 3: Total Piezas Impresas */}
-                <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-stone-500 text-[9px] font-bold uppercase tracking-wider">
-                    <span>Total Piezas</span>
-                    <Package className="w-3 h-3 text-sky-700" />
-                  </div>
-                  <div className="my-1">
-                    <span className="text-xl font-black text-stone-900 block leading-none">
-                      {kpis.totalPiezas}
-                    </span>
-                    <span className="text-[9px] font-bold text-amber-900 block mt-0.5">
-                      {kpis.totalKits} kits completos
+                {/* KPI 3: CARTERA DÓLARES (ANTI-DEVALUACIÓN) */}
+                <div className="p-2 rounded-xl border border-emerald-300 bg-emerald-50/70 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-emerald-900 text-[8.5px] font-bold uppercase tracking-wider">
+                    <span>Cartera USD</span>
+                    <span className="text-[7.5px] font-extrabold text-emerald-800 bg-emerald-100 px-1 rounded-sm">
+                      Anti-deval
                     </span>
                   </div>
-                  <div className="text-[8.5px] text-stone-500 font-medium truncate">
-                    {kpis.totalAfiches} af · {kpis.totalGuias} guías · {kpis.totalHojas} h
+                  <div className="my-0.5">
+                    <span className="text-base font-black text-emerald-800 font-mono block leading-none tabular-nums">
+                      ${wallet.totalUsdPurchased.toFixed(0)} USD
+                    </span>
+                    <span className="text-[8.5px] font-bold text-amber-900 font-mono block mt-0.5 truncate tabular-nums">
+                      -{wallet.totalVesSpent.toLocaleString('es-VE', { maximumFractionDigits: 0 })} Bs.
+                    </span>
+                  </div>
+                  <div>
+                    <div className="w-full bg-emerald-200 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-emerald-600 h-1.5 rounded-full w-[90%]" />
+                    </div>
+                    <span className="text-[8px] text-stone-600 block mt-0.5 truncate font-medium">
+                      Tasa: {wallet.averageExchangeRate.toFixed(2)} Bs/$
+                    </span>
                   </div>
                 </div>
 
-                {/* KPI 4: Pagos Pendientes */}
-                <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-stone-500 text-[9px] font-bold uppercase tracking-wider">
-                    <span>Por Cobrar</span>
-                    <Clock className="w-3 h-3 text-amber-700" />
+                {/* KPI 4: Total Piezas Impresas */}
+                <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-stone-500 text-[8.5px] font-bold uppercase tracking-wider">
+                    <span>Piezas</span>
+                    <Package className="w-2.5 h-2.5 text-sky-700" />
                   </div>
-                  <div className="my-1">
-                    <span className="text-xl font-black text-amber-900 block leading-none">
+                  <div className="my-0.5">
+                    <span className="text-lg font-black text-stone-900 block leading-none">
+                      {kpis.totalPiezas}
+                    </span>
+                    <span className="text-[8.5px] font-bold text-amber-900 block mt-0.5">
+                      {kpis.totalKits} kits
+                    </span>
+                  </div>
+                  <div className="text-[8px] text-stone-500 font-medium truncate">
+                    {kpis.totalAfiches} af · {kpis.totalGuias} guías
+                  </div>
+                </div>
+
+                {/* KPI 5: Pagos Pendientes */}
+                <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-stone-500 text-[8.5px] font-bold uppercase tracking-wider">
+                    <span>Por Cobrar</span>
+                    <Clock className="w-2.5 h-2.5 text-amber-700" />
+                  </div>
+                  <div className="my-0.5">
+                    <span className="text-base font-black text-amber-900 block leading-none truncate">
                       {kpis.montoPendientePagoEUR.toFixed(2)} €
                     </span>
-                    <span className="text-[9px] font-bold text-stone-600 block mt-0.5">
+                    <span className="text-[8.5px] font-bold text-stone-600 block mt-0.5">
                       {kpis.reservasPendientesPago} solicitudes
                     </span>
                   </div>
-                  <div className="text-[8.5px] text-stone-500 font-medium">
+                  <div className="text-[8px] text-stone-500 font-medium truncate">
                     {kpis.reservasVerificando > 0
                       ? `${kpis.reservasVerificando} por conciliar`
-                      : 'Al día en verificación'}
+                      : 'Pagos conciliados'}
                   </div>
                 </div>
 
-                {/* KPI 5: Logística y Entregas */}
-                <div className="p-2.5 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-stone-500 text-[9px] font-bold uppercase tracking-wider">
+                {/* KPI 6: Logística y Entregas */}
+                <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-stone-500 text-[8.5px] font-bold uppercase tracking-wider">
                     <span>Despacho</span>
-                    <Truck className="w-3 h-3 text-stone-700" />
+                    <Truck className="w-2.5 h-2.5 text-stone-700" />
                   </div>
-                  <div className="my-1">
-                    <span className="text-xl font-black text-stone-900 block leading-none">
+                  <div className="my-0.5">
+                    <span className="text-lg font-black text-stone-900 block leading-none">
                       {pctEntregas}%
                     </span>
-                    <span className="text-[9px] font-bold text-emerald-800 block mt-0.5">
+                    <span className="text-[8.5px] font-bold text-emerald-800 block mt-0.5">
                       {kpis.entregasCompletadas} entregadas
                     </span>
                   </div>
@@ -425,8 +462,8 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
                         style={{ width: `${Math.min(pctEntregas, 100)}%` }}
                       />
                     </div>
-                    <span className="text-[8.5px] text-stone-500 block mt-0.5 truncate font-medium">
-                      {kpis.entregasPendientes} en Caracas/ruta
+                    <span className="text-[8px] text-stone-500 block mt-0.5 truncate font-medium">
+                      {kpis.entregasPendientes} en ruta/Caracas
                     </span>
                   </div>
                 </div>
@@ -674,15 +711,13 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
                       </span>
                     </div>
 
-                    {/* Mayor Demanda */}
-                    {topInstitutions.length > 0 && (
-                      <div className="p-1.5 rounded-lg bg-white border border-stone-200 flex items-start gap-1.5">
-                        <ShieldCheck className="w-3 h-3 text-amber-800 shrink-0 mt-0.5" />
-                        <span className="text-stone-800 leading-tight truncate">
-                          Top demanda: <strong>{topInstitutions[0].name}</strong> ({topInstitutions[0].piezas} pzs).
-                        </span>
-                      </div>
-                    )}
+                    {/* Resguardo Cambiario Anti-Devaluación */}
+                    <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-start gap-1.5">
+                      <ShieldCheck className="w-3 h-3 text-emerald-700 shrink-0 mt-0.5" />
+                      <span className="text-emerald-950 leading-tight">
+                        <strong>Resguardo Cambiario Activo:</strong> ${wallet.totalUsdPurchased.toFixed(2)} USD protegidos (canjeados {wallet.totalVesSpent.toLocaleString('es-VE')} Bs. a {wallet.averageExchangeRate.toFixed(2)} Bs/$).
+                      </span>
+                    </div>
                   </div>
                 </div>
 

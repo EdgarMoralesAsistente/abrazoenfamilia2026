@@ -53,4 +53,29 @@ export interface CrmKPIs {
   montoColegiosEUR: number;
   piezasParroquias: number;
   piezasColegios: number;
+  walletSummary?: DollarWalletSummary;
+}
+
+export interface DollarPurchase {
+  id: string;
+  timestamp: string;
+  date: string;
+  usdAmount: number;
+  exchangeRate: number;
+  vesAmount: number;
+  originAccount: string;
+  destinationWallet: string;
+  reference: string;
+  operator: string;
+  notes: string;
+}
+
+export interface DollarWalletSummary {
+  totalUsdPurchased: number;
+  totalVesSpent: number;
+  averageExchangeRate: number;
+  lastExchangeRate: number;
+  purchaseCount: number;
+  totalVesCollectedEstimated: number;
+  availableVesBalance: number;
 }

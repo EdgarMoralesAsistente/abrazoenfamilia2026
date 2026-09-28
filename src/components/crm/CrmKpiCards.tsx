@@ -1,12 +1,13 @@
 import React from 'react';
-import { ShoppingCart, Euro, Package, Clock, Truck, CheckCircle2 } from 'lucide-react';
+import { ShoppingCart, Euro, Package, Clock, Truck, CheckCircle2, DollarSign, ArrowUpRight } from 'lucide-react';
 import { CrmKPIs } from '../../types/reservation';
 
 interface CrmKpiCardsProps {
   kpis: CrmKPIs;
+  onOpenDollarWallet?: () => void;
 }
 
-export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
+export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis, onOpenDollarWallet }) => {
   // Porcentaje de reservaciones pagadas
   const pctReservasPagadas =
     kpis.totalReservas > 0
@@ -26,8 +27,18 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
       ? Math.round((kpis.entregasCompletadas / kpis.totalReservas) * 100)
       : 0;
 
+  const wallet = kpis.walletSummary || {
+    totalUsdPurchased: 550,
+    totalVesSpent: 24460,
+    averageExchangeRate: 44.47,
+    lastExchangeRate: 44.80,
+    purchaseCount: 2,
+    totalVesCollectedEstimated: 35000,
+    availableVesBalance: 10540
+  };
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 min-w-0">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 min-w-0">
       {/* KPI 1: Total Reservas con Barra de Progreso de Pagadas */}
       <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3 min-w-0">
         <div className="flex items-center justify-between text-stone-600">
@@ -57,7 +68,7 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
             </div>
             <div className="flex items-center justify-between text-[11px] text-stone-600 mt-1 font-medium">
               <span>{kpis.reservasPagadas} pagadas</span>
-              <span>{kpis.reservasPendientesPago} pendientes</span>
+              <span>{kpis.reservasPendientesPago} pend.</span>
             </div>
           </div>
         </div>
@@ -101,7 +112,60 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
         </div>
       </div>
 
-      {/* KPI 3: Total Piezas */}
+      {/* KPI 3: CARTERA DE DÓLARES & COBERTURA CAMBIARIA (NUEVO REQUERIMIENTO) */}
+      <div className="bg-gradient-to-b from-white to-emerald-50/30 border border-emerald-200/90 rounded-2xl p-4 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between space-y-3 min-w-0">
+        <div className="flex items-center justify-between text-stone-600">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-950">Cartera USD</span>
+            <span className="text-[9px] font-extrabold text-emerald-800 bg-emerald-100/90 px-1.5 py-0.2 rounded-sm uppercase">
+              Anti-deval.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenDollarWallet}
+            className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 transition-colors shadow-xs"
+            title="Abrir Cartera de Dólares y Registrar Compra"
+          >
+            <DollarSign className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div>
+          <div className="flex items-baseline justify-between gap-1">
+            <span className="text-2xl sm:text-3xl font-black text-emerald-800 font-mono tracking-tight tabular-nums">
+              ${wallet.totalUsdPurchased.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            {onOpenDollarWallet && (
+              <button
+                type="button"
+                onClick={onOpenDollarWallet}
+                className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-0.5 underline underline-offset-2"
+              >
+                + Comprar
+                <ArrowUpRight className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          <div className="mt-2 pt-1.5 border-t border-emerald-100/80 space-y-0.5 text-[11px] text-stone-600">
+            <div className="flex items-center justify-between">
+              <span className="text-stone-500">Restado en Bs:</span>
+              <span className="font-bold text-amber-900 font-mono tabular-nums">
+                -{wallet.totalVesSpent.toLocaleString('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} Bs.
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-stone-500">Tasa promedio:</span>
+              <span className="font-semibold text-stone-800 font-mono tabular-nums">
+                {wallet.averageExchangeRate.toFixed(2)} Bs/$
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI 4: Total Piezas */}
       <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3 min-w-0">
         <div className="flex items-center justify-between text-stone-600">
           <span className="text-xs font-bold uppercase tracking-wider">Total Piezas</span>
@@ -123,7 +187,7 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
         </div>
       </div>
 
-      {/* KPI 4: Pagos Pendientes */}
+      {/* KPI 5: Pagos Pendientes */}
       <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3 min-w-0">
         <div className="flex items-center justify-between text-stone-600">
           <span className="text-xs font-bold uppercase tracking-wider">Pagos Pendientes</span>
@@ -150,7 +214,7 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
         </div>
       </div>
 
-      {/* KPI 5: Logística y Entregas */}
+      {/* KPI 6: Logística y Entregas */}
       <div className="bg-white border border-stone-200/80 rounded-2xl p-4 shadow-xs hover:border-stone-300 transition-all flex flex-col justify-between space-y-3 min-w-0">
         <div className="flex items-center justify-between text-stone-600">
           <span className="text-xs font-bold uppercase tracking-wider">Por Entregar</span>
@@ -186,4 +250,3 @@ export const CrmKpiCards: React.FC<CrmKpiCardsProps> = ({ kpis }) => {
     </div>
   );
 };
-

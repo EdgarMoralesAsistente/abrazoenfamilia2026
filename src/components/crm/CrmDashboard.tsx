@@ -13,14 +13,17 @@ import {
   ChevronDown,
   LogOut,
   UserCheck,
-  Layers
+  Layers,
+  DollarSign
 } from 'lucide-react';
 import {
   CrmReservation,
   CrmKPIs,
   ReservationStatus,
   PaymentStatus,
-  DeliveryStatus
+  DeliveryStatus,
+  DollarPurchase,
+  DollarWalletSummary
 } from '../../types/reservation';
 import { CrmUser } from '../../types/auth';
 import {
@@ -29,6 +32,10 @@ import {
   createCrmReservation,
   deleteCrmReservation
 } from '../../lib/googleSheets';
+import {
+  getStoredDollarPurchases,
+  calculateDollarWalletSummary
+} from '../../utils/dollarWalletStorage';
 import { formatPhoneForWhatsApp } from '../../utils/phoneUtils';
 import { CrmKpiCards } from './CrmKpiCards';
 import { CrmCharts } from './CrmCharts';
@@ -36,6 +43,7 @@ import { CrmEditModal } from './CrmEditModal';
 import { CrmCreateModal } from './CrmCreateModal';
 import { CrmExecutivePdfReport } from './CrmExecutivePdfReport';
 import { CrmSheetsSetupModal } from './CrmSheetsSetupModal';
+import { CrmDollarPurchaseModal } from './CrmDollarPurchaseModal';
 
 interface CrmDashboardProps {
   onBackToPublicSite: () => void;
@@ -64,7 +72,11 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [isSheetsSetupModalOpen, setIsSheetsSetupModalOpen] = useState(false);
+  const [isDollarModalOpen, setIsDollarModalOpen] = useState(false);
   const [deletingCode, setDeletingCode] = useState<string | null>(null);
+
+  // Cartera de Dólares & Cobertura Cambiaria (USD vs Bolívares)
+  const [dollarPurchases, setDollarPurchases] = useState<DollarPurchase[]>(() => getStoredDollarPurchases());
 
   // Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -207,10 +219,22 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
       totalColegios,
       montoParroquiasEUR,
       montoColegiosEUR,
-      piezasParroquias,
       piezasColegios
     };
   }, [reservations]);
+
+  // Resumen financiero de la Cartera de Dólares
+  const walletSummary: DollarWalletSummary = useMemo(() => {
+    return calculateDollarWalletSummary(dollarPurchases, reservations, 44.5);
+  }, [dollarPurchases, reservations]);
+
+  // KPIs unificados con el resumen de la Cartera de Dólares
+  const kpisWithWallet: CrmKPIs = useMemo(() => {
+    return {
+      ...kpis,
+      walletSummary
+    };
+  }, [kpis, walletSummary]);
 
   // Filtrado de reservas
   const filteredReservations = useMemo(() => {
@@ -433,6 +457,19 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
               <span>Exportar CSV</span>
             </button>
 
+            {/* Botón Cartera de Dólares (Anti-Devaluación) */}
+            <button
+              onClick={() => setIsDollarModalOpen(true)}
+              className="h-9 px-3 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-900 inline-flex items-center gap-1.5 transition-colors shadow-2xs shrink-0 whitespace-nowrap cursor-pointer"
+              title="Gestionar Cartera de Dólares y Registrar Compra de Divisas (Anti-devaluación)"
+            >
+              <DollarSign className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Cartera USD:</span>
+              <span className="font-mono text-emerald-950 font-black bg-white px-1.5 py-0.5 rounded border border-emerald-200 text-[11px]">
+                ${walletSummary.totalUsdPurchased.toFixed(2)}
+              </span>
+            </button>
+
             {/* Botón Descargar Reporte PDF (1 Página) */}
             <button
               onClick={() => setIsPdfModalOpen(true)}
@@ -523,6 +560,15 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
           {/* Acciones principales en móvil con altura y estilo uniforme */}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
+              onClick={() => setIsDollarModalOpen(true)}
+              className="h-8.5 px-2 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-xs font-bold text-emerald-900 inline-flex items-center gap-1 shadow-2xs transition-all shrink-0"
+              title="Cartera de Dólares (Anti-Devaluación)"
+            >
+              <DollarSign className="w-3.5 h-3.5 text-emerald-700" />
+              <span className="font-mono text-[11px]">${walletSummary.totalUsdPurchased.toFixed(0)}</span>
+            </button>
+
+            <button
               onClick={() => setIsSheetsSetupModalOpen(true)}
               className="h-8.5 w-8.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 active:bg-stone-100 text-stone-700 flex items-center justify-center shadow-2xs transition-all shrink-0"
               title="Crear o verificar hojas en Google Sheets"
@@ -564,8 +610,8 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
           </div>
         )}
 
-        {/* 1. Módulo de Tarjetas KPI */}
-        <CrmKpiCards kpis={kpis} />
+        {/* 1. Módulo de Tarjetas KPI con Cartera de Dólares */}
+        <CrmKpiCards kpis={kpisWithWallet} onOpenDollarWallet={() => setIsDollarModalOpen(true)} />
 
         {/* 2. Módulo de Gráficos Recharts */}
         <CrmCharts reservations={reservations} />
@@ -857,8 +903,19 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}
         reservations={reservations}
-        kpis={kpis}
+        kpis={kpisWithWallet}
         currentUser={currentUser}
+      />
+
+      {/* Modal de Cartera de Dólares & Cobertura Cambiaria */}
+      <CrmDollarPurchaseModal
+        isOpen={isDollarModalOpen}
+        onClose={() => setIsDollarModalOpen(false)}
+        purchases={dollarPurchases}
+        onPurchasesChange={(updated) => setDollarPurchases(updated)}
+        summary={walletSummary}
+        operatorName={currentUser?.name || 'Secretariado Pastoral Familiar'}
+        onSuccessToast={(msg) => showToast(msg, 'success')}
       />
 
       {/* Modal de Estructura Multi-Hojas en Google Sheets */}

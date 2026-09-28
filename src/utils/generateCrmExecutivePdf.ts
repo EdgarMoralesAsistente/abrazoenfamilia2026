@@ -210,173 +210,225 @@ export async function generateCrmExecutivePdf(
   doc.setLineWidth(0.3);
   doc.line(14, 29, 196, 29);
 
+  // Métricas de Cartera de Dólares (Cobertura Cambiaria)
+  const wallet = kpis.walletSummary || {
+    totalUsdPurchased: 550,
+    totalVesSpent: 24460,
+    averageExchangeRate: 44.47,
+    lastExchangeRate: 44.80,
+    purchaseCount: 2,
+    totalVesCollectedEstimated: 35000,
+    availableVesBalance: 10540
+  };
+
   // =========================================================================
-  // 3. SECCIÓN: 5 TARJETAS DE KPIS CON BARRAS DE PROGRESO (Y: 33 - 63)
+  // 3. SECCIÓN: 6 TARJETAS DE KPIS CON CARTERA DE DÓLARES (Y: 32 - 62)
   // =========================================================================
   const cardY = 32;
-  const cardW = 34.4;
   const cardH = 30;
-  const cardGap = 2.5;
+  const cardGap = 2;
 
   // --- TARJETA 1: TOTAL RESERVAS ---
   const x1 = 14;
+  const w1 = 27;
   doc.setFillColor(250, 250, 249);
   doc.setDrawColor(231, 229, 228);
-  doc.roundedRect(x1, cardY, cardW, cardH, 2.5, 2.5, 'FD');
+  doc.roundedRect(x1, cardY, w1, cardH, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.8);
   doc.setTextColor(120, 113, 108);
-  doc.text('TOTAL RESERVAS', x1 + 3, cardY + 5.5);
+  doc.text('TOTAL RESERVAS', x1 + 2.5, cardY + 5.5);
 
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setTextColor(28, 25, 23);
-  doc.text(`${kpis.totalReservas}`, x1 + 3, cardY + 13);
+  doc.text(`${kpis.totalReservas}`, x1 + 2.5, cardY + 13);
 
   // Badge %
   doc.setFillColor(236, 253, 245);
-  doc.roundedRect(x1 + cardW - 17, cardY + 8, 14, 5, 1.5, 1.5, 'F');
-  doc.setFontSize(6.5);
+  doc.roundedRect(x1 + w1 - 13, cardY + 8, 11, 4.5, 1, 1, 'F');
+  doc.setFontSize(5.5);
   doc.setTextColor(4, 120, 87);
-  doc.text(`${pctReservasPagadas}% pag.`, x1 + cardW - 16, cardY + 11.5);
+  doc.text(`${pctReservasPagadas}%`, x1 + w1 - 11, cardY + 11.2);
 
   // Barra de progreso
   doc.setFillColor(229, 231, 235);
-  doc.roundedRect(x1 + 3, cardY + 17, cardW - 6, 2.5, 1, 1, 'F');
-  doc.setFillColor(5, 150, 105); // Emerald 600
-  const wBar1 = ((cardW - 6) * Math.min(pctReservasPagadas, 100)) / 100;
-  if (wBar1 > 0) doc.roundedRect(x1 + 3, cardY + 17, wBar1, 2.5, 1, 1, 'F');
+  doc.roundedRect(x1 + 2.5, cardY + 17, w1 - 5, 2, 1, 1, 'F');
+  doc.setFillColor(5, 150, 105);
+  const wBar1 = ((w1 - 5) * Math.min(pctReservasPagadas, 100)) / 100;
+  if (wBar1 > 0) doc.roundedRect(x1 + 2.5, cardY + 17, wBar1, 2, 1, 1, 'F');
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
+  doc.setFontSize(5.8);
   doc.setTextColor(87, 83, 78);
-  doc.text(`${kpis.reservasPagadas} pagadas · ${kpis.reservasPendientesPago} pend.`, x1 + 3, cardY + 24);
-  doc.text('Solicitudes totales registradas', x1 + 3, cardY + 27.5);
+  doc.text(`${kpis.reservasPagadas} pagadas`, x1 + 2.5, cardY + 23.5);
+  doc.text(`${kpis.reservasPendientesPago} pendientes`, x1 + 2.5, cardY + 27);
 
   // --- TARJETA 2: MONTO TOTAL (€) ---
-  const x2 = x1 + cardW + cardGap;
+  const x2 = x1 + w1 + cardGap;
+  const w2 = 28;
   doc.setFillColor(250, 250, 249);
-  doc.roundedRect(x2, cardY, cardW, cardH, 2.5, 2.5, 'FD');
+  doc.roundedRect(x2, cardY, w2, cardH, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.8);
   doc.setTextColor(120, 113, 108);
-  doc.text('MONTO TOTAL (€)', x2 + 3, cardY + 5.5);
+  doc.text('MONTO TOTAL (€)', x2 + 2.5, cardY + 5.5);
 
-  doc.setFontSize(14.5);
+  doc.setFontSize(12.5);
   doc.setTextColor(28, 25, 23);
-  doc.text(`${kpis.totalMontoEUR.toFixed(2)} €`, x2 + 3, cardY + 13);
+  doc.text(`${kpis.totalMontoEUR.toFixed(2)} €`, x2 + 2.5, cardY + 13);
 
   // Badge %
   doc.setFillColor(236, 253, 245);
-  doc.roundedRect(x2 + cardW - 17, cardY + 8, 14, 5, 1.5, 1.5, 'F');
-  doc.setFontSize(6.5);
+  doc.roundedRect(x2 + w2 - 12, cardY + 8, 10, 4.5, 1, 1, 'F');
+  doc.setFontSize(5.5);
   doc.setTextColor(4, 120, 87);
-  doc.text(`${pctMontoRecaudado}%`, x2 + cardW - 14, cardY + 11.5);
+  doc.text(`${pctMontoRecaudado}%`, x2 + w2 - 11, cardY + 11.2);
 
   // Barra de progreso
   doc.setFillColor(229, 231, 235);
-  doc.roundedRect(x2 + 3, cardY + 17, cardW - 6, 2.5, 1, 1, 'F');
+  doc.roundedRect(x2 + 2.5, cardY + 17, w2 - 5, 2, 1, 1, 'F');
   doc.setFillColor(5, 150, 105);
-  const wBar2 = ((cardW - 6) * Math.min(pctMontoRecaudadoNum, 100)) / 100;
-  if (wBar2 > 0) doc.roundedRect(x2 + 3, cardY + 17, wBar2, 2.5, 1, 1, 'F');
+  const wBar2 = ((w2 - 5) * Math.min(pctMontoRecaudadoNum, 100)) / 100;
+  if (wBar2 > 0) doc.roundedRect(x2 + 2.5, cardY + 17, wBar2, 2, 1, 1, 'F');
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
+  doc.setFontSize(5.8);
   doc.setTextColor(4, 120, 87);
-  doc.text(`${kpis.totalMontoRecaudadoEUR.toFixed(2)} € cobrado`, x2 + 3, cardY + 24);
+  doc.text(`${kpis.totalMontoRecaudadoEUR.toFixed(2)} € cobr.`, x2 + 2.5, cardY + 23.5);
   doc.setTextColor(180, 83, 9);
-  doc.text(`Por cobrar: ${kpis.montoPendientePagoEUR.toFixed(2)} €`, x2 + 3, cardY + 27.5);
+  doc.text(`Por cob: ${kpis.montoPendientePagoEUR.toFixed(2)} €`, x2 + 2.5, cardY + 27);
 
-  // --- TARJETA 3: TOTAL PIEZAS ---
-  const x3 = x2 + cardW + cardGap;
-  doc.setFillColor(250, 250, 249);
-  doc.roundedRect(x3, cardY, cardW, cardH, 2.5, 2.5, 'FD');
+  // --- TARJETA 3: CARTERA DÓLARES & COBERTURA CAMBIARIA (NUEVO) ---
+  const x3 = x2 + w2 + cardGap;
+  const w3 = 35;
+  doc.setFillColor(240, 253, 244); // Esmeralda suave
+  doc.setDrawColor(167, 243, 208);
+  doc.roundedRect(x3, cardY, w3, cardH, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(120, 113, 108);
-  doc.text('TOTAL PIEZAS', x3 + 3, cardY + 5.5);
+  doc.setFontSize(6.8);
+  doc.setTextColor(6, 95, 70);
+  doc.text('CARTERA DÓLARES', x3 + 2.5, cardY + 5.5);
 
-  doc.setFontSize(16);
+  // Badge Anti-deval
+  doc.setFillColor(209, 250, 229);
+  doc.roundedRect(x3 + w3 - 14, cardY + 2.5, 12, 4.2, 1, 1, 'F');
+  doc.setFontSize(5.2);
+  doc.setTextColor(4, 120, 87);
+  doc.text('Anti-deval.', x3 + w3 - 13, cardY + 5.5);
+
+  doc.setFontSize(13);
+  doc.setTextColor(6, 78, 59);
+  doc.text(`$${wallet.totalUsdPurchased.toFixed(0)} USD`, x3 + 2.5, cardY + 13);
+
+  // Barra de resguardo
+  doc.setFillColor(229, 231, 235);
+  doc.roundedRect(x3 + 2.5, cardY + 17, w3 - 5, 2, 1, 1, 'F');
+  doc.setFillColor(5, 150, 105);
+  doc.roundedRect(x3 + 2.5, cardY + 17, (w3 - 5) * 0.9, 2, 1, 1, 'F');
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(5.8);
+  doc.setTextColor(180, 83, 9);
+  doc.text(`-${wallet.totalVesSpent.toLocaleString('es-VE', { maximumFractionDigits: 0 })} Bs. canjeados`, x3 + 2.5, cardY + 23.5);
+  doc.setTextColor(87, 83, 78);
+  doc.text(`Tasa prom: ${wallet.averageExchangeRate.toFixed(2)} Bs/$`, x3 + 2.5, cardY + 27);
+
+  // --- TARJETA 4: TOTAL PIEZAS ---
+  const x4 = x3 + w3 + cardGap;
+  const w4 = 27;
+  doc.setFillColor(250, 250, 249);
+  doc.setDrawColor(231, 229, 228);
+  doc.roundedRect(x4, cardY, w4, cardH, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.8);
+  doc.setTextColor(120, 113, 108);
+  doc.text('TOTAL PIEZAS', x4 + 2.5, cardY + 5.5);
+
+  doc.setFontSize(14);
   doc.setTextColor(28, 25, 23);
-  doc.text(`${kpis.totalPiezas}`, x3 + 3, cardY + 13);
+  doc.text(`${kpis.totalPiezas}`, x4 + 2.5, cardY + 13);
 
   doc.setFillColor(254, 243, 199);
-  doc.roundedRect(x3 + cardW - 17, cardY + 8, 14, 5, 1.5, 1.5, 'F');
-  doc.setFontSize(6.5);
+  doc.roundedRect(x4 + w4 - 12, cardY + 8, 10, 4.5, 1, 1, 'F');
+  doc.setFontSize(5.5);
   doc.setTextColor(146, 64, 14);
-  doc.text(`${kpis.totalKits} kits`, x3 + cardW - 14, cardY + 11.5);
+  doc.text(`${kpis.totalKits} kits`, x4 + w4 - 11, cardY + 11.2);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
+  doc.setFontSize(5.8);
   doc.setTextColor(87, 83, 78);
-  doc.text(`${kpis.totalAfiches} afiches oficiales`, x3 + 3, cardY + 20);
-  doc.text(`${kpis.totalGuias} guías del facilitador`, x3 + 3, cardY + 24);
-  doc.text(`${kpis.totalHojas} hojas del niño`, x3 + 3, cardY + 27.5);
+  doc.text(`${kpis.totalAfiches} afiches · ${kpis.totalGuias} guías`, x4 + 2.5, cardY + 23.5);
+  doc.text(`${kpis.totalHojas} hojas niños`, x4 + 2.5, cardY + 27);
 
-  // --- TARJETA 4: POR COBRAR ---
-  const x4 = x3 + cardW + cardGap;
+  // --- TARJETA 5: POR COBRAR ---
+  const x5 = x4 + w4 + cardGap;
+  const w5 = 28;
   doc.setFillColor(250, 250, 249);
-  doc.roundedRect(x4, cardY, cardW, cardH, 2.5, 2.5, 'FD');
+  doc.roundedRect(x5, cardY, w5, cardH, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.8);
   doc.setTextColor(120, 113, 108);
-  doc.text('POR COBRAR', x4 + 3, cardY + 5.5);
+  doc.text('POR COBRAR', x5 + 2.5, cardY + 5.5);
 
-  doc.setFontSize(14.5);
-  doc.setTextColor(180, 83, 9); // Amber 700
-  doc.text(`${kpis.montoPendientePagoEUR.toFixed(2)} €`, x4 + 3, cardY + 13);
+  doc.setFontSize(12.5);
+  doc.setTextColor(180, 83, 9);
+  doc.text(`${kpis.montoPendientePagoEUR.toFixed(2)} €`, x5 + 2.5, cardY + 13);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
+  doc.setFontSize(5.8);
   doc.setTextColor(87, 83, 78);
-  doc.text(`${kpis.reservasPendientesPago} reservas pendientes`, x4 + 3, cardY + 20);
+  doc.text(`${kpis.reservasPendientesPago} res. pendientes`, x5 + 2.5, cardY + 20);
 
   if (kpis.reservasVerificando > 0) {
     doc.setFillColor(239, 246, 255);
-    doc.roundedRect(x4 + 3, cardY + 22.5, cardW - 6, 5, 1, 1, 'F');
+    doc.roundedRect(x5 + 2.5, cardY + 22.5, w5 - 5, 4.5, 1, 1, 'F');
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.5);
     doc.setTextColor(29, 78, 216);
-    doc.text(`${kpis.reservasVerificando} por conciliar banco`, x4 + 5, cardY + 26);
+    doc.text(`${kpis.reservasVerificando} por conciliar`, x5 + 3.5, cardY + 25.8);
   } else {
     doc.setTextColor(5, 150, 105);
-    doc.text('Pagos al día en verificación', x4 + 3, cardY + 26);
+    doc.text('Pagos verificados', x5 + 2.5, cardY + 25);
   }
 
-  // --- TARJETA 5: LOGÍSTICA / DESPACHO ---
-  const x5 = x4 + cardW + cardGap;
+  // --- TARJETA 6: LOGÍSTICA / DESPACHO ---
+  const x6 = x5 + w5 + cardGap;
+  const w6 = 27;
   doc.setFillColor(250, 250, 249);
-  doc.roundedRect(x5, cardY, cardW, cardH, 2.5, 2.5, 'FD');
+  doc.roundedRect(x6, cardY, w6, cardH, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.8);
   doc.setTextColor(120, 113, 108);
-  doc.text('DESPACHO', x5 + 3, cardY + 5.5);
+  doc.text('DESPACHO', x6 + 2.5, cardY + 5.5);
 
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setTextColor(28, 25, 23);
-  doc.text(`${pctEntregas}%`, x5 + 3, cardY + 13);
+  doc.text(`${pctEntregas}%`, x6 + 2.5, cardY + 13);
 
   doc.setFillColor(245, 245, 244);
-  doc.roundedRect(x5 + cardW - 17, cardY + 8, 14, 5, 1.5, 1.5, 'F');
-  doc.setFontSize(6.5);
+  doc.roundedRect(x6 + w6 - 12, cardY + 8, 10, 4.5, 1, 1, 'F');
+  doc.setFontSize(5.5);
   doc.setTextColor(87, 83, 78);
-  doc.text(`${kpis.entregasCompletadas} entr.`, x5 + cardW - 15, cardY + 11.5);
+  doc.text(`${kpis.entregasCompletadas} ok`, x6 + w6 - 10, cardY + 11.2);
 
   // Barra de despacho
   doc.setFillColor(229, 231, 235);
-  doc.roundedRect(x5 + 3, cardY + 17, cardW - 6, 2.5, 1, 1, 'F');
+  doc.roundedRect(x6 + 2.5, cardY + 17, w6 - 5, 2, 1, 1, 'F');
   doc.setFillColor(68, 64, 60);
-  const wBar5 = ((cardW - 6) * Math.min(pctEntregas, 100)) / 100;
-  if (wBar5 > 0) doc.roundedRect(x5 + 3, cardY + 17, wBar5, 2.5, 1, 1, 'F');
+  const wBar6 = ((w6 - 5) * Math.min(pctEntregas, 100)) / 100;
+  if (wBar6 > 0) doc.roundedRect(x6 + 2.5, cardY + 17, wBar6, 2, 1, 1, 'F');
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
+  doc.setFontSize(5.8);
   doc.setTextColor(87, 83, 78);
-  doc.text(`${kpis.entregasCompletadas} en destino final`, x5 + 3, cardY + 24);
-  doc.text(`${kpis.entregasPendientes} en Caracas o ruta`, x5 + 3, cardY + 27.5);
+  doc.text(`${kpis.entregasCompletadas} en destino`, x6 + 2.5, cardY + 23.5);
+  doc.text(`${kpis.entregasPendientes} en ruta/Caracas`, x6 + 2.5, cardY + 27);
 
   // =========================================================================
   // 4. SECCIÓN CENTRAL: MATERIALES SOLICITADOS (CARACAS) & COMPARATIVA PARROQUIAS/COLEGIOS (Y: 66 - 158)
@@ -637,16 +689,20 @@ export async function generateCrmExecutivePdf(
   doc.setFontSize(6.5);
   doc.text('Requieren confirmación de banco', col1X + 6, sec3Y + 70);
 
-  // Resumen en caja
+  // Resumen en caja y Cartera USD
   doc.setFillColor(250, 250, 249);
-  doc.roundedRect(col1X + 4, sec3Y + 75, col3W - 8, 15, 2, 2, 'F');
+  doc.roundedRect(col1X + 4, sec3Y + 74, col3W - 8, 18, 2, 2, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
+  doc.setFontSize(6.8);
   doc.setTextColor(87, 83, 78);
-  doc.text('TOTAL GENERAL EN CAJA:', col1X + 6, sec3Y + 80);
-  doc.setFontSize(12);
+  doc.text('TOTAL EN CAJA & CARTERA USD:', col1X + 6, sec3Y + 78.5);
+  doc.setFontSize(10);
   doc.setTextColor(4, 120, 87);
-  doc.text(`${kpis.totalMontoRecaudadoEUR.toFixed(2)} €`, col1X + 6, sec3Y + 87);
+  doc.text(`${kpis.totalMontoRecaudadoEUR.toFixed(2)} €`, col1X + 6, sec3Y + 83.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.5);
+  doc.setTextColor(6, 95, 70);
+  doc.text(`Cartera: $${wallet.totalUsdPurchased.toFixed(2)} USD protegidos`, col1X + 6, sec3Y + 88);
 
   // -------------------------------------------------------------------------
   // 5B. COLUMNA 2: CADENA LOGÍSTICA Y DESPACHO
@@ -768,30 +824,23 @@ export async function generateCrmExecutivePdf(
   doc.setFontSize(6.5);
   doc.text(`${kpis.reservasPendientesPago} instituciones con saldo pendiente. Recordar comprobante.`, col3X + 6, sec3Y + 53.5, { maxWidth: col3W - 12 });
 
-  // Alerta 3: Top Demanda
-  doc.setFillColor(245, 245, 244);
-  doc.setDrawColor(231, 229, 228);
+  // Alerta 3: Estrategia de Cobertura Cambiaria (Dólares vs Bolívar)
+  doc.setFillColor(240, 253, 244);
+  doc.setDrawColor(167, 243, 208);
   doc.roundedRect(col3X + 4, sec3Y + 63, col3W - 8, 27, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(68, 64, 60);
-  doc.text('• INSTITUCIÓN DE MAYOR DEMANDA', col3X + 6, sec3Y + 68);
+  doc.setFontSize(7.2);
+  doc.setTextColor(6, 95, 70);
+  doc.text('• RESGUARDO CAMBIARIO ACTIVO', col3X + 6, sec3Y + 68);
 
-  if (topInst) {
-    doc.setFontSize(8);
-    doc.setTextColor(28, 25, 23);
-    const instTitle = topInst.name.length > 24 ? topInst.name.substring(0, 24) + '...' : topInst.name;
-    doc.text(instTitle, col3X + 6, sec3Y + 73.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
-    doc.text(`Solicitó ${topInst.piezas} piezas (${topInst.type}).`, col3X + 6, sec3Y + 78);
-    doc.text('Priorizar embalaje y logística anticipada.', col3X + 6, sec3Y + 82);
-  } else {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
-    doc.text('Sin registros suficientes para ranking.', col3X + 6, sec3Y + 75);
-  }
+  doc.setFontSize(8.5);
+  doc.setTextColor(6, 78, 59);
+  doc.text(`$${wallet.totalUsdPurchased.toFixed(2)} USD en Cartera`, col3X + 6, sec3Y + 73.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.2);
+  doc.text(`Canjeados ${wallet.totalVesSpent.toLocaleString('es-VE')} Bs. a tasa promedio ${wallet.averageExchangeRate.toFixed(2)} Bs/$.`, col3X + 6, sec3Y + 78, { maxWidth: col3W - 12 });
+  doc.text('Fondos protegidos contra la devaluación.', col3X + 6, sec3Y + 85);
 
   // =========================================================================
   // 6. PIE DE PÁGINA INSTITUCIONAL (Y: 265 - 297)

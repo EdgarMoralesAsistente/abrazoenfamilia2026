@@ -77,7 +77,7 @@ export async function setupRequiredSheets(operatorName: string = 'Administrador'
     return {
       success: true,
       message: 'Se envió la orden de creación de hojas al webhook de Google Sheets.',
-      allSheets: ['Reservas CRM', 'Pagos Reportados', 'Inventario y Despachos', 'Usuarios CRM', 'Historial y Auditoría']
+      allSheets: ['Reservas CRM', 'Pagos Reportados', 'Cartera de Dólares', 'Inventario y Despachos', 'Usuarios CRM', 'Historial y Auditoría']
     };
   } catch (error: any) {
     // Si fetch falla por CORS en navegador, el envío no-cors igualmente despacha la orden a Apps Script
@@ -94,7 +94,7 @@ export async function setupRequiredSheets(operatorName: string = 'Administrador'
       return {
         success: true,
         message: 'Orden enviada a Google Sheets en modo transparente (no-cors).',
-        allSheets: ['Reservas CRM', 'Pagos Reportados', 'Inventario y Despachos', 'Usuarios CRM', 'Historial y Auditoría']
+        allSheets: ['Reservas CRM', 'Pagos Reportados', 'Cartera de Dólares', 'Inventario y Despachos', 'Usuarios CRM', 'Historial y Auditoría']
       };
     } catch (fallbackError: any) {
       return {
