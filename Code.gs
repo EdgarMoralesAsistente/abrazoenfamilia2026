@@ -391,6 +391,109 @@ function recordDollarPurchaseInSheet(body) {
 }
 
 /**
+ * Actualiza una compra existente en la pestaña "Cartera de Dólares"
+ */
+function updateDollarPurchaseInSheet(body) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(USD_WALLET_SHEET_NAME);
+    if (!sheet) {
+      initializeAllRequiredSheets();
+      sheet = ss.getSheetByName(USD_WALLET_SHEET_NAME);
+    }
+    if (!sheet) return;
+
+    const id = String(body.id || "").trim();
+    if (!id) return;
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      recordDollarPurchaseInSheet(body);
+      return;
+    }
+
+    const values = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    let targetRow = -1;
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0]).trim() === id) {
+        targetRow = i + 2;
+        break;
+      }
+    }
+
+    if (targetRow === -1) {
+      recordDollarPurchaseInSheet(body);
+      return;
+    }
+
+    const usdAmount = Number(body.usdAmount || 0);
+    const exchangeRate = Number(body.exchangeRate || 0);
+    const vesAmount = Number(body.vesAmount || (usdAmount * exchangeRate));
+    const origin = String(body.originAccount || "Pago Móvil / Banco");
+    const destination = String(body.destinationWallet || "Bóveda / Efectivo Divisas Pastoral");
+    const ref = String(body.reference || "");
+    const operator = String(body.operator || "Equipo Pastoral");
+    const notes = String(body.notes || "");
+    const dateOrTimestamp = body.date || body.timestamp || Utilities.formatDate(new Date(), "America/Caracas", "dd/MM/yyyy HH:mm:ss");
+
+    sheet.getRange(targetRow, 1, 1, 10).setValues([[
+      dateOrTimestamp,
+      id,
+      usdAmount,
+      exchangeRate,
+      vesAmount,
+      origin,
+      destination,
+      ref,
+      operator,
+      notes
+    ]]);
+
+    recordAuditLog(
+      operator,
+      "UPDATE_USD_PURCHASE",
+      id,
+      "Actualización de compra USD: $" + usdAmount.toFixed(2) + " a " + exchangeRate.toFixed(2) + " Bs/$ (-" + vesAmount.toFixed(2) + " Bs.)"
+    );
+  } catch (err) {
+    Logger.log("Error al actualizar compra de dólares: " + err);
+  }
+}
+
+/**
+ * Elimina una compra de divisas de la pestaña "Cartera de Dólares"
+ */
+function deleteDollarPurchaseInSheet(id, operator) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(USD_WALLET_SHEET_NAME);
+    if (!sheet) return;
+
+    const targetId = String(id || "").trim();
+    if (!targetId) return;
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return;
+
+    const values = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0]).trim() === targetId) {
+        sheet.deleteRow(i + 2);
+        recordAuditLog(
+          operator || "Administrador",
+          "DELETE_USD_PURCHASE",
+          targetId,
+          "Compra de dólares anulada/eliminada de la cartera"
+        );
+        break;
+      }
+    }
+  } catch (err) {
+    Logger.log("Error al eliminar compra de dólares: " + err);
+  }
+}
+
+/**
  * Sincroniza el despacho y logística en la pestaña "Inventario y Despachos"
  */
 function recordDispatchInInventorySheet(body) {
@@ -628,14 +731,32 @@ function doPost(e) {
     }
 
     // ==========================================
-    // 0.5. ACCIÓN: REGISTRO DE COMPRA DE DÓLARES (CARTERA USD)
+    // 0.5. ACCIÓN: REGISTRO, EDICIÓN Y ELIMINACIÓN DE COMPRAS DE DÓLARES (CARTERA USD)
     // ==========================================
-    if (action === "BUY_USD" || action === "RECORD_USD" || action === "RECORD_FX") {
+    if (action === "BUY_USD" || action === "CREATE_USD_PURCHASE" || action === "RECORD_USD" || action === "RECORD_FX") {
       recordDollarPurchaseInSheet(body);
       return createJsonResponse({
         status: "success",
         action: "BUY_USD",
         message: "Compra de divisas registrada exitosamente en Cartera de Dólares."
+      });
+    }
+
+    if (action === "UPDATE_USD_PURCHASE" || action === "EDIT_USD_PURCHASE") {
+      updateDollarPurchaseInSheet(body);
+      return createJsonResponse({
+        status: "success",
+        action: "UPDATE_USD_PURCHASE",
+        message: "Compra de divisas actualizada exitosamente en Cartera de Dólares."
+      });
+    }
+
+    if (action === "DELETE_USD_PURCHASE" || action === "REMOVE_USD_PURCHASE") {
+      deleteDollarPurchaseInSheet(body.id, body.operator);
+      return createJsonResponse({
+        status: "success",
+        action: "DELETE_USD_PURCHASE",
+        message: "Compra de divisas eliminada de Cartera de Dólares."
       });
     }
 

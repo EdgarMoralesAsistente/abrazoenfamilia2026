@@ -1,57 +1,44 @@
 import { DollarPurchase, DollarWalletSummary, CrmReservation } from '../types/reservation';
-import { getGasEndpoint } from '../lib/googleSheets';
+import {
+  createDollarPurchaseInSheets,
+  updateDollarPurchaseInSheets,
+  deleteDollarPurchaseInSheets,
+  fetchDollarPurchasesFromSheets
+} from '../lib/googleSheets';
 
 const STORAGE_KEY = 'aef_dollar_purchases';
 
-// Semilla inicial realista de compras de divisas para resguardo de valor
-const INITIAL_PURCHASES_SEED: DollarPurchase[] = [
-  {
-    id: 'USD-COMPRA-001',
-    timestamp: '25/09/2026 11:20',
-    date: '2026-09-25',
-    usdAmount: 300,
-    exchangeRate: 44.20,
-    vesAmount: 13260,
-    originAccount: 'Pago Móvil / Banco Mercantil',
-    destinationWallet: 'Bóveda / Efectivo Divisas Pastoral',
-    reference: 'COMP-MCBO-8910',
-    operator: 'Secretariado Pastoral Familiar',
-    notes: 'Conversión de pagos móviles recibidos de Parroquia Los Olivos y colegios zona norte.'
-  },
-  {
-    id: 'USD-COMPRA-002',
-    timestamp: '27/09/2026 16:45',
-    date: '2026-09-27',
-    usdAmount: 250,
-    exchangeRate: 44.80,
-    vesAmount: 11200,
-    originAccount: 'Banesco Banco Universal',
-    destinationWallet: 'Custodia USD Bancamiga',
-    reference: 'REF-BNS-3420',
-    operator: 'Administración Pastoral',
-    notes: 'Cobertura cambiaria para proteger recaudación de semana 38.'
-  }
-];
-
 /**
- * Obtiene todas las compras de dólares almacenadas
+ * Obtiene todas las compras de dólares almacenadas localmente.
+ * Limpia automáticamente cualquier dato ficticio de prueba anterior.
  */
 export function getStoredDollarPurchases(): DollarPurchase[] {
-  if (typeof window === 'undefined') return INITIAL_PURCHASES_SEED;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+      if (Array.isArray(parsed)) {
+        // Filtrar y remover datos de prueba antiguos
+        const real = parsed.filter(
+          (p: any) =>
+            p &&
+            p.id !== 'USD-COMPRA-001' &&
+            p.id !== 'USD-COMPRA-002' &&
+            !p.notes?.includes('zona norte') &&
+            !p.notes?.includes('semana 38')
+        );
+        // Si se limpiaron datos de prueba, actualizar el almacenamiento
+        if (real.length !== parsed.length) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(real));
+        }
+        return real;
       }
     }
-    // Guardar semilla inicial si no existe
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_PURCHASES_SEED));
-    return INITIAL_PURCHASES_SEED;
-  } catch {
-    return INITIAL_PURCHASES_SEED;
+  } catch (err) {
+    console.warn('Error al leer compras de dólares de localStorage:', err);
   }
+  return [];
 }
 
 /**
@@ -67,6 +54,28 @@ export function saveStoredDollarPurchases(purchases: DollarPurchase[]): void {
 }
 
 /**
+ * Sincroniza las compras de dólares desde Google Sheets hacia la memoria local
+ */
+export async function syncDollarPurchasesWithSheets(): Promise<{
+  success: boolean;
+  data: DollarPurchase[];
+  message?: string;
+}> {
+  try {
+    const res = await fetchDollarPurchasesFromSheets();
+    if (res.success && Array.isArray(res.data)) {
+      // Guardar lo que viene de Google Sheets en local
+      saveStoredDollarPurchases(res.data);
+      return { success: true, data: res.data };
+    }
+  } catch (err: any) {
+    console.warn('No se pudo sincronizar en vivo con Google Sheets:', err);
+  }
+  const local = getStoredDollarPurchases();
+  return { success: false, data: local, message: 'Usando datos locales' };
+}
+
+/**
  * Registra una nueva compra de dólares tanto en memoria local como en Google Sheets
  */
 export async function recordNewDollarPurchase(
@@ -75,7 +84,7 @@ export async function recordNewDollarPurchase(
   const current = getStoredDollarPurchases();
   const nextNum = current.length + 1;
   const id = `USD-COMPRA-${String(nextNum).padStart(3, '0')}`;
-  
+
   const now = new Date();
   const timestamp = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
@@ -85,7 +94,7 @@ export async function recordNewDollarPurchase(
     date: data.date || now.toISOString().slice(0, 10),
     usdAmount: Number(data.usdAmount || 0),
     exchangeRate: Number(data.exchangeRate || 0),
-    vesAmount: Number(data.vesAmount || (data.usdAmount * data.exchangeRate)),
+    vesAmount: Number(data.vesAmount || data.usdAmount * data.exchangeRate),
     originAccount: data.originAccount || 'Pago Móvil / Banco',
     destinationWallet: data.destinationWallet || 'Bóveda / Efectivo Pastoral',
     reference: data.reference || `REF-${Date.now().toString().slice(-6)}`,
@@ -96,54 +105,52 @@ export async function recordNewDollarPurchase(
   const updated = [newPurchase, ...current];
   saveStoredDollarPurchases(updated);
 
-  // Intentar sincronizar con Google Sheets si existe webhook
-  const endpoint = getGasEndpoint();
-  if (endpoint && endpoint.startsWith('http')) {
-    try {
-      fetch(endpoint, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'BUY_USD',
-          ...newPurchase
-        })
-      }).catch((e) => console.warn('Sync compra USD no-cors:', e));
-    } catch (e) {
-      console.warn('Fallo sync compra USD:', e);
-    }
-  }
+  // Sincronizar en tiempo real con Google Sheets (hoja 'Cartera de Dólares')
+  createDollarPurchaseInSheets(newPurchase).catch((err) =>
+    console.warn('Error enviando compra a Google Sheets:', err)
+  );
 
   return {
     success: true,
     purchase: newPurchase,
-    message: `¡Compra de $${newPurchase.usdAmount.toFixed(2)} USD registrada con éxito!`
+    message: `¡Compra de $${newPurchase.usdAmount.toFixed(2)} USD registrada y sincronizada con Google Sheets!`
   };
 }
 
 /**
- * Elimina o anula una compra de dólares por su ID
+ * Actualiza una compra de dólares existente en local y en Google Sheets
  */
-export function removeDollarPurchase(id: string): DollarPurchase[] {
+export async function updateStoredDollarPurchase(
+  purchase: DollarPurchase
+): Promise<{ success: boolean; purchase: DollarPurchase; message?: string }> {
+  const current = getStoredDollarPurchases();
+  const updated = current.map((p) => (p.id === purchase.id ? purchase : p));
+  saveStoredDollarPurchases(updated);
+
+  // Sincronizar actualización en Google Sheets (hoja 'Cartera de Dólares')
+  updateDollarPurchaseInSheets(purchase).catch((err) =>
+    console.warn('Error actualizando compra en Google Sheets:', err)
+  );
+
+  return {
+    success: true,
+    purchase,
+    message: `¡Compra ${purchase.id} actualizada y sincronizada en Google Sheets!`
+  };
+}
+
+/**
+ * Elimina o anula una compra de dólares por su ID en local y en Google Sheets
+ */
+export function removeDollarPurchase(id: string, operator: string = 'Administrador'): DollarPurchase[] {
   const current = getStoredDollarPurchases();
   const filtered = current.filter((p) => p.id !== id);
   saveStoredDollarPurchases(filtered);
 
-  // Notificar anulación a Google Sheets si hay webhook
-  const endpoint = getGasEndpoint();
-  if (endpoint && endpoint.startsWith('http')) {
-    try {
-      fetch(endpoint, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'DELETE_USD_PURCHASE',
-          id
-        })
-      }).catch(() => {});
-    } catch {}
-  }
+  // Sincronizar eliminación en Google Sheets
+  deleteDollarPurchaseInSheets(id, operator).catch((err) =>
+    console.warn('Error eliminando compra en Google Sheets:', err)
+  );
 
   return filtered;
 }
@@ -168,26 +175,25 @@ export function calculateDollarWalletSummary(
     }
   });
 
-  const averageRate = totalUsd > 0 ? totalVesSpent / totalUsd : lastRate;
+  const averageRate = totalUsd > 0 ? totalVesSpent / totalUsd : 0;
 
-  // Estimar los Bolívares ingresados/recaudados
-  // Se calculan las reservas en estado Pagado cuyo método de pago es Pago Móvil o Bolívares
+  // Estimar los Bolívares ingresados/recaudados de las reservas en estado Pagado
   let totalVesCollectedEstimated = 0;
   reservations.forEach((r) => {
     if (r.paymentStatus === 'Pagado') {
       const eur = Number(r.totalEUR || 0);
-      const isPagoMovil = !r.paymentMethod || r.paymentMethod.toLowerCase().includes('móvil') || r.paymentMethod.toLowerCase().includes('movil') || r.paymentMethod.toLowerCase().includes('transferencia');
+      const isPagoMovil =
+        !r.paymentMethod ||
+        r.paymentMethod.toLowerCase().includes('móvil') ||
+        r.paymentMethod.toLowerCase().includes('movil') ||
+        r.paymentMethod.toLowerCase().includes('transferencia');
       if (isPagoMovil) {
-        // En Venezuela 1 EUR aprox = 1 USD en cotización pastoral para materiales
-        totalVesCollectedEstimated += eur * lastRate;
+        totalVesCollectedEstimated += eur * (lastRate > 0 ? lastRate : fallbackRate);
       }
     }
   });
 
-  // Si aún no hay reservaciones cargadas o el saldo calculado es bajo, asegurar un piso coherente
-  // basado en los Bolívares ingresados para no mostrar negativos ficticios
-  const baseCollected = Math.max(totalVesCollectedEstimated, totalVesSpent * 1.15);
-  const availableVesBalance = Math.max(0, baseCollected - totalVesSpent);
+  const availableVesBalance = Math.max(0, totalVesCollectedEstimated - totalVesSpent);
 
   return {
     totalUsdPurchased: totalUsd,
@@ -195,7 +201,7 @@ export function calculateDollarWalletSummary(
     averageExchangeRate: averageRate,
     lastExchangeRate: lastRate,
     purchaseCount: purchases.length,
-    totalVesCollectedEstimated: baseCollected,
+    totalVesCollectedEstimated,
     availableVesBalance
   };
 }

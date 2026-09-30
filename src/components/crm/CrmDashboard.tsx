@@ -30,11 +30,13 @@ import {
   fetchCrmReservations,
   updateCrmReservation,
   createCrmReservation,
-  deleteCrmReservation
+  deleteCrmReservation,
+  setupRequiredSheets
 } from '../../lib/googleSheets';
 import {
   getStoredDollarPurchases,
-  calculateDollarWalletSummary
+  calculateDollarWalletSummary,
+  syncDollarPurchasesWithSheets
 } from '../../utils/dollarWalletStorage';
 import { formatPhoneForWhatsApp } from '../../utils/phoneUtils';
 import { CrmKpiCards } from './CrmKpiCards';
@@ -90,7 +92,15 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
 
   // Carga y sincronización de datos con Google Sheets
   const loadData = async (showLoading = true, notifyIfNew = false) => {
-    if (showLoading) setLoading(true);
+    // Sincronizar compras de dólares desde Google Sheets
+    try {
+      syncDollarPurchasesWithSheets().then((usdRes) => {
+        if (usdRes.success && Array.isArray(usdRes.data)) {
+          setDollarPurchases(usdRes.data);
+        }
+      }).catch(() => {});
+    } catch {}
+
     setSyncStatus('syncing');
     try {
       const res = await fetchCrmReservations();
@@ -112,6 +122,15 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
   };
 
   useEffect(() => {
+    // 0. Auto-verificar y crear hojas necesarias en Google Sheets en el primer arranque
+    try {
+      const hasAutoSetupSheets = sessionStorage.getItem('aef_sheets_autosetup_done');
+      if (!hasAutoSetupSheets) {
+        sessionStorage.setItem('aef_sheets_autosetup_done', 'true');
+        setupRequiredSheets(currentUser?.name || 'Sistema CRM').catch(() => {});
+      }
+    } catch {}
+
     // 1. Carga inicial
     loadData(true, false);
 

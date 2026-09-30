@@ -1,4 +1,4 @@
-import { CrmReservation } from '../types/reservation';
+import { CrmReservation, DollarPurchase } from '../types/reservation';
 import { getSheetsWebhookUrl } from '../utils/sheetsSync';
 
 export const getGasEndpoint = (): string => {
@@ -473,5 +473,123 @@ export async function authenticateCrmUser(
     success: false,
     message: 'Usuario o contraseña incorrectos. Verifique sus datos de acceso.'
   };
+}
+
+/**
+ * Obtiene todas las compras de dólares directamente de Google Sheets (hoja 'Cartera de Dólares')
+ */
+export async function fetchDollarPurchasesFromSheets(): Promise<{
+  success: boolean;
+  data: DollarPurchase[];
+  message?: string;
+}> {
+  const endpoint = getGasEndpoint();
+  if (!endpoint || !endpoint.startsWith('http')) {
+    return { success: false, data: [], message: 'Webhook no configurado' };
+  }
+
+  try {
+    const url = endpoint.includes('?') ? `${endpoint}&sheet=usd` : `${endpoint}?sheet=usd`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP Error ${response.status}`);
+    }
+
+    const result = await response.json();
+    if (result && Array.isArray(result.data)) {
+      const formatted: DollarPurchase[] = result.data.map((row: any) => ({
+        id: String(row.id || ''),
+        timestamp: String(row.timestamp || ''),
+        date: String(row.date || row.timestamp || ''),
+        usdAmount: Number(row.usdAmount || 0),
+        exchangeRate: Number(row.exchangeRate || 0),
+        vesAmount: Number(row.vesAmount || 0),
+        originAccount: String(row.originAccount || 'Pago Móvil / Banco'),
+        destinationWallet: String(row.destinationWallet || 'Bóveda / Efectivo Divisas Pastoral'),
+        reference: String(row.reference || ''),
+        operator: String(row.operator || 'Equipo Pastoral'),
+        notes: String(row.notes || '')
+      })).filter((p) => p.id !== '');
+
+      return { success: true, data: formatted };
+    }
+    return { success: false, data: [], message: 'Formato no reconocido' };
+  } catch (error: any) {
+    return { success: false, data: [], message: error.message };
+  }
+}
+
+/**
+ * Registra una compra de dólares en Google Sheets (action: 'BUY_USD')
+ */
+export async function createDollarPurchaseInSheets(purchase: DollarPurchase): Promise<boolean> {
+  const endpoint = getGasEndpoint();
+  if (!endpoint || !endpoint.startsWith('http')) return false;
+
+  try {
+    await fetch(endpoint, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'BUY_USD',
+        ...purchase
+      })
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Actualiza una compra de dólares en Google Sheets (action: 'UPDATE_USD_PURCHASE')
+ */
+export async function updateDollarPurchaseInSheets(purchase: DollarPurchase): Promise<boolean> {
+  const endpoint = getGasEndpoint();
+  if (!endpoint || !endpoint.startsWith('http')) return false;
+
+  try {
+    await fetch(endpoint, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'UPDATE_USD_PURCHASE',
+        ...purchase
+      })
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Elimina una compra de dólares en Google Sheets (action: 'DELETE_USD_PURCHASE')
+ */
+export async function deleteDollarPurchaseInSheets(id: string, operator: string = 'Administrador'): Promise<boolean> {
+  const endpoint = getGasEndpoint();
+  if (!endpoint || !endpoint.startsWith('http')) return false;
+
+  try {
+    await fetch(endpoint, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'DELETE_USD_PURCHASE',
+        id,
+        operator
+      })
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 

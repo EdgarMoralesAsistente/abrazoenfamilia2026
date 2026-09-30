@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import {
   X,
   DollarSign,
-  TrendingDown,
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
   Trash2,
+  Edit2,
   Calendar,
   Building2,
   CreditCard,
@@ -14,10 +14,18 @@ import {
   AlertCircle,
   PlusCircle,
   History,
-  FileSpreadsheet
+  RefreshCw,
+  Layers,
+  ArrowLeft
 } from 'lucide-react';
 import { DollarPurchase, DollarWalletSummary } from '../../types/reservation';
-import { recordNewDollarPurchase, removeDollarPurchase } from '../../utils/dollarWalletStorage';
+import {
+  recordNewDollarPurchase,
+  updateStoredDollarPurchase,
+  removeDollarPurchase,
+  syncDollarPurchasesWithSheets
+} from '../../utils/dollarWalletStorage';
+import { setupRequiredSheets } from '../../lib/googleSheets';
 
 interface CrmDollarPurchaseModalProps {
   isOpen: boolean;
@@ -39,9 +47,10 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
   onSuccessToast
 }) => {
   const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
+  const [editingPurchase, setEditingPurchase] = useState<DollarPurchase | null>(null);
 
   // Form State
-  const [usdAmount, setUsdAmount] = useState<string>('200');
+  const [usdAmount, setUsdAmount] = useState<string>('');
   const [exchangeRate, setExchangeRate] = useState<string>(
     summary.lastExchangeRate > 0 ? summary.lastExchangeRate.toString() : '44.50'
   );
@@ -53,6 +62,7 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
   const [reference, setReference] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -61,7 +71,72 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
   const numRate = parseFloat(exchangeRate) || 0;
   const calculatedVes = numUsd * numRate;
 
-  const handleCreatePurchase = async (e: React.FormEvent) => {
+  // Iniciar edición de una compra
+  const handleStartEdit = (purchase: DollarPurchase) => {
+    setEditingPurchase(purchase);
+    setUsdAmount(purchase.usdAmount.toString());
+    setExchangeRate(purchase.exchangeRate.toString());
+    setDate(purchase.date || new Date().toISOString().slice(0, 10));
+    setOriginAccount(
+      [
+        'Pago Móvil / Banco Mercantil',
+        'Banesco Banco Universal',
+        'Banco de Venezuela',
+        'Banco Provincial',
+        'Banco Nacional de Crédito (BNC)',
+        'Caja Efectivo Bolívares'
+      ].includes(purchase.originAccount)
+        ? purchase.originAccount
+        : 'Otro'
+    );
+    if (
+      ![
+        'Pago Móvil / Banco Mercantil',
+        'Banesco Banco Universal',
+        'Banco de Venezuela',
+        'Banco Provincial',
+        'Banco Nacional de Crédito (BNC)',
+        'Caja Efectivo Bolívares'
+      ].includes(purchase.originAccount)
+    ) {
+      setCustomOrigin(purchase.originAccount);
+    }
+    setDestinationWallet(
+      [
+        'Bóveda / Efectivo Divisas Pastoral',
+        'Custodia USD Bancamiga',
+        'Custodia USD Bancaribe',
+        'Custodia USD Mercantil',
+        'Zelle Reserva Arquidiócesis'
+      ].includes(purchase.destinationWallet)
+        ? purchase.destinationWallet
+        : 'Otro'
+    );
+    if (
+      ![
+        'Bóveda / Efectivo Divisas Pastoral',
+        'Custodia USD Bancamiga',
+        'Custodia USD Bancaribe',
+        'Custodia USD Mercantil',
+        'Zelle Reserva Arquidiócesis'
+      ].includes(purchase.destinationWallet)
+    ) {
+      setCustomDestination(purchase.destinationWallet);
+    }
+    setReference(purchase.reference || '');
+    setNotes(purchase.notes || '');
+    setActiveTab('create');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPurchase(null);
+    setUsdAmount('');
+    setReference('');
+    setNotes('');
+  };
+
+  // Guardar (Crear o Actualizar)
+  const handleSubmitPurchase = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
@@ -82,47 +157,113 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
       const finalDestination =
         destinationWallet === 'Otro' ? customDestination.trim() || 'Cartera Pastoral' : destinationWallet;
 
-      const res = await recordNewDollarPurchase({
-        date,
-        usdAmount: numUsd,
-        exchangeRate: numRate,
-        vesAmount: calculatedVes,
-        originAccount: finalOrigin,
-        destinationWallet: finalDestination,
-        reference: reference.trim() || `COMP-${Date.now().toString().slice(-6)}`,
-        operator: operatorName,
-        notes: notes.trim()
-      });
+      if (editingPurchase) {
+        // MODO EDICIÓN
+        const updatedPurchase: DollarPurchase = {
+          ...editingPurchase,
+          date,
+          usdAmount: numUsd,
+          exchangeRate: numRate,
+          vesAmount: calculatedVes,
+          originAccount: finalOrigin,
+          destinationWallet: finalDestination,
+          reference: reference.trim() || editingPurchase.reference,
+          operator: operatorName,
+          notes: notes.trim()
+        };
 
-      if (res.success) {
-        // Actualizar lista local en el estado padre
-        const updated = [res.purchase, ...purchases.filter((p) => p.id !== res.purchase.id)];
-        onPurchasesChange(updated);
+        const res = await updateStoredDollarPurchase(updatedPurchase);
+        const updatedList = purchases.map((p) => (p.id === updatedPurchase.id ? updatedPurchase : p));
+        onPurchasesChange(updatedList);
 
         if (onSuccessToast) {
-          onSuccessToast(res.message || 'Compra de dólares resguardada exitosamente en la Cartera.');
+          onSuccessToast(res.message || 'Compra de dólares actualizada y sincronizada en Google Sheets.');
         }
 
-        // Resetear campos
-        setUsdAmount('100');
-        setReference('');
-        setNotes('');
+        handleCancelEdit();
         setActiveTab('history');
+      } else {
+        // MODO CREACIÓN
+        const res = await recordNewDollarPurchase({
+          date,
+          usdAmount: numUsd,
+          exchangeRate: numRate,
+          vesAmount: calculatedVes,
+          originAccount: finalOrigin,
+          destinationWallet: finalDestination,
+          reference: reference.trim() || `COMP-${Date.now().toString().slice(-6)}`,
+          operator: operatorName,
+          notes: notes.trim()
+        });
+
+        if (res.success) {
+          const updated = [res.purchase, ...purchases.filter((p) => p.id !== res.purchase.id)];
+          onPurchasesChange(updated);
+
+          if (onSuccessToast) {
+            onSuccessToast(res.message || 'Compra de dólares registrada y sincronizada en Google Sheets.');
+          }
+
+          setUsdAmount('');
+          setReference('');
+          setNotes('');
+          setActiveTab('history');
+        }
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al registrar la compra.');
+      setErrorMsg(err.message || 'Error al procesar la operación.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Eliminar compra
   const handleDeletePurchase = (id: string, usd: number) => {
-    if (confirm(`¿Estás seguro de anular la compra de $${usd.toFixed(2)} USD? Se revertirán los fondos.`)) {
-      const updated = removeDollarPurchase(id);
+    if (confirm(`¿Estás seguro de anular la compra de $${usd.toFixed(2)} USD? Se revertirá en Google Sheets.`)) {
+      const updated = removeDollarPurchase(id, operatorName);
       onPurchasesChange(updated);
       if (onSuccessToast) {
-        onSuccessToast('Compra de dólares revertida y actualizada.');
+        onSuccessToast(`Compra ${id} eliminada de la Cartera y de Google Sheets.`);
       }
+    }
+  };
+
+  // Sincronización en vivo con Google Sheets
+  const handleSyncWithSheets = async () => {
+    setIsSyncing(true);
+    try {
+      const syncResult = await syncDollarPurchasesWithSheets();
+      if (syncResult.success) {
+        onPurchasesChange(syncResult.data);
+        if (onSuccessToast) {
+          onSuccessToast(`¡${syncResult.data.length} compras sincronizadas directamente desde Google Sheets!`);
+        }
+      } else {
+        if (onSuccessToast) {
+          onSuccessToast('Datos locales cargados. Verifica conexión con Google Sheets.');
+        }
+      }
+    } catch (err: any) {
+      setErrorMsg(`Error al sincronizar: ${err.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Crear la hoja Cartera de Dólares si aún no existe en Google Sheets
+  const handleCreateSheetInGoogle = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await setupRequiredSheets(operatorName);
+      if (res.success) {
+        if (onSuccessToast) {
+          onSuccessToast('¡Orden de verificación y creación de la hoja enviada a Google Sheets!');
+        }
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -145,17 +286,27 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-stone-500 mt-0.5">
-                Convierte los Bolívares recaudados a Dólares ($ USD) para proteger el poder adquisitivo de la pastoral
+                Sincronización bidireccional directa con la hoja <strong>"Cartera de Dólares"</strong> en Google Sheets
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-xl transition-colors"
-            title="Cerrar ventana"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleSyncWithSheets}
+              disabled={isSyncing}
+              className="p-2 text-stone-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors border border-stone-200/80 bg-white shadow-2xs"
+              title="Sincronizar compras desde Google Sheets"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-600' : ''}`} />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-xl transition-colors"
+              title="Cerrar ventana"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Resumen Superior de Indicadores de Cartera */}
@@ -165,7 +316,7 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
             <div className="text-xl font-black text-emerald-700 font-mono tabular-nums tracking-tight">
               ${summary.totalUsdPurchased.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div className="text-[10px] text-stone-400 mt-0.5">Total USD protegidos</div>
+            <div className="text-[10px] text-stone-400 mt-0.5">Total USD en resguardo</div>
           </div>
 
           <div className="bg-white rounded-xl p-2.5 border border-stone-200 shadow-xs">
@@ -173,15 +324,15 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
             <div className="text-lg font-black text-amber-800 font-mono tabular-nums tracking-tight">
               {summary.totalVesSpent.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.
             </div>
-            <div className="text-[10px] text-stone-400 mt-0.5">Invertidos en divisas</div>
+            <div className="text-[10px] text-stone-400 mt-0.5">Total Bs. convertidos</div>
           </div>
 
           <div className="bg-white rounded-xl p-2.5 border border-stone-200 shadow-xs">
             <div className="text-[11px] font-semibold text-stone-500">Tasa Ponderada</div>
             <div className="text-lg font-black text-stone-900 font-mono tabular-nums tracking-tight">
-              {summary.averageExchangeRate.toFixed(2)} Bs/$
+              {summary.averageExchangeRate > 0 ? `${summary.averageExchangeRate.toFixed(2)} Bs/$` : 'N/A'}
             </div>
-            <div className="text-[10px] text-stone-400 mt-0.5">Promedio de compra</div>
+            <div className="text-[10px] text-stone-400 mt-0.5">Promedio de adquisición</div>
           </div>
 
           <div className="bg-white rounded-xl p-2.5 border border-stone-200 shadow-xs">
@@ -194,28 +345,52 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
         </div>
 
         {/* Selector de pestañas */}
-        <div className="flex border-b border-stone-200 px-6 shrink-0 bg-white">
+        <div className="flex items-center justify-between border-b border-stone-200 px-6 shrink-0 bg-white">
+          <div className="flex">
+            <button
+              onClick={() => {
+                if (editingPurchase) handleCancelEdit();
+                setActiveTab('create');
+              }}
+              className={`flex items-center gap-2 py-3 px-4 font-semibold text-xs border-b-2 transition-colors ${
+                activeTab === 'create'
+                  ? 'border-emerald-600 text-emerald-800'
+                  : 'border-transparent text-stone-500 hover:text-stone-800'
+              }`}
+            >
+              {editingPurchase ? (
+                <>
+                  <Edit2 className="w-4 h-4 text-amber-700" />
+                  <span>Editando Compra ({editingPurchase.id})</span>
+                </>
+              ) : (
+                <>
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Registrar Compra de Dólares</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`flex items-center gap-2 py-3 px-4 font-semibold text-xs border-b-2 transition-colors ${
+                activeTab === 'history'
+                  ? 'border-emerald-600 text-emerald-800'
+                  : 'border-transparent text-stone-500 hover:text-stone-800'
+              }`}
+            >
+              <History className="w-4 h-4" />
+              <span>Historial ({purchases.length})</span>
+            </button>
+          </div>
+
           <button
-            onClick={() => setActiveTab('create')}
-            className={`flex items-center gap-2 py-3 px-4 font-semibold text-xs border-b-2 transition-colors ${
-              activeTab === 'create'
-                ? 'border-emerald-600 text-emerald-800'
-                : 'border-transparent text-stone-500 hover:text-stone-800'
-            }`}
+            type="button"
+            onClick={handleCreateSheetInGoogle}
+            className="text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition-colors inline-flex items-center gap-1 shadow-2xs"
+            title="Crear pestaña 'Cartera de Dólares' en tu hoja de Google Sheets"
           >
-            <PlusCircle className="w-4 h-4" />
-            Registrar Compra de Dólares
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`flex items-center gap-2 py-3 px-4 font-semibold text-xs border-b-2 transition-colors ${
-              activeTab === 'history'
-                ? 'border-emerald-600 text-emerald-800'
-                : 'border-transparent text-stone-500 hover:text-stone-800'
-            }`}
-          >
-            <History className="w-4 h-4" />
-            Historial de Compras ({purchases.length})
+            <Layers className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Crear Hoja en Google Sheets</span>
           </button>
         </div>
 
@@ -229,7 +404,24 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
           )}
 
           {activeTab === 'create' ? (
-            <form onSubmit={handleCreatePurchase} className="space-y-5">
+            <form onSubmit={handleSubmitPurchase} className="space-y-5">
+              {editingPurchase && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-900">
+                  <span className="font-semibold">
+                    Modificando la compra <strong className="font-mono">{editingPurchase.id}</strong>. Al guardar se
+                    actualizará en Google Sheets.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="text-stone-600 hover:text-stone-900 font-bold underline flex items-center gap-1"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Cancelar edición
+                  </button>
+                </div>
+              )}
+
               {/* Bloque central: Conversión Dinámica */}
               <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4.5 space-y-4">
                 <div className="text-xs font-bold text-emerald-950 flex items-center justify-between">
@@ -252,12 +444,12 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
                       <span className="absolute left-3 top-2.5 text-stone-400 font-bold">$</span>
                       <input
                         type="number"
-                        min="1"
+                        min="0.01"
                         step="any"
                         required
                         value={usdAmount}
                         onChange={(e) => setUsdAmount(e.target.value)}
-                        placeholder="Ej. 250"
+                        placeholder="Ej. 150.00"
                         className="w-full pl-8 pr-3 py-2 text-base font-bold font-mono text-stone-900 bg-white border border-stone-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                       />
                     </div>
@@ -272,14 +464,14 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
                       <input
                         type="number"
                         min="0.01"
-                        step="0.01"
+                        step="any"
                         required
                         value={exchangeRate}
                         onChange={(e) => setExchangeRate(e.target.value)}
                         placeholder="Ej. 44.80"
                         className="w-full px-3 py-2 text-base font-bold font-mono text-stone-900 bg-white border border-stone-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                       />
-                      <span className="absolute right-3 top-2.5 text-stone-400 text-xs">Bs/$</span>
+                      <span className="absolute right-3 top-2.5 text-stone-400 text-xs font-bold">Bs/$</span>
                     </div>
                   </div>
 
@@ -430,7 +622,7 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Ej. Resguardo de pagos recibidos de Parroquia San Onofre y Colegio Gonzaga..."
+                  placeholder="Ej. Cobertura cambiaria de fondos recibidos por Pago Móvil..."
                   className="w-full px-3 py-2 text-xs text-stone-900 bg-stone-50 border border-stone-300 rounded-xl"
                 />
               </div>
@@ -442,7 +634,7 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
                   onClick={onClose}
                   className="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors"
                 >
-                  Cancelar
+                  Cerrar
                 </button>
                 <button
                   type="submit"
@@ -450,7 +642,11 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
                   className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-xs transition-all flex items-center gap-2"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  {isSubmitting ? 'Guardando operación...' : `Confirmar y Comprar $${numUsd.toFixed(2)} USD`}
+                  {isSubmitting
+                    ? 'Sincronizando con Google Sheets...'
+                    : editingPurchase
+                    ? `Guardar Cambios ($${numUsd.toFixed(2)} USD)`
+                    : `Confirmar y Comprar $${numUsd.toFixed(2)} USD`}
                 </button>
               </div>
             </form>
@@ -459,10 +655,10 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-stone-700">
-                  Transacciones de Cobertura Cambiaria Registradas
+                  Transacciones en Cartera de Dólares
                 </span>
                 <span className="text-xs text-stone-500">
-                  {purchases.length} operaciones · Total:${' '}
+                  {purchases.length} operaciones · Total:{' '}
                   <strong className="text-emerald-700 font-mono">
                     ${summary.totalUsdPurchased.toFixed(2)} USD
                   </strong>
@@ -470,12 +666,21 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
               </div>
 
               {purchases.length === 0 ? (
-                <div className="text-center py-10 bg-stone-50 rounded-2xl border border-stone-200">
-                  <Wallet className="w-10 h-10 text-stone-300 mx-auto mb-2" />
-                  <p className="text-xs font-semibold text-stone-600">Aún no hay compras de dólares registradas</p>
-                  <p className="text-[11px] text-stone-400 mt-1">
-                    Haz clic en "Registrar Compra de Dólares" para resguardar la recaudación en divisas.
-                  </p>
+                <div className="text-center py-12 bg-stone-50 rounded-2xl border border-stone-200 space-y-3">
+                  <Wallet className="w-12 h-12 text-stone-300 mx-auto" />
+                  <div>
+                    <p className="text-xs font-bold text-stone-700">No hay compras de dólares registradas todavía</p>
+                    <p className="text-[11px] text-stone-400 mt-1 max-w-sm mx-auto">
+                      Registra tu primera compra para blindar los bolívares recaudados contra la devaluación.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('create')}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition-all"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>Registrar Primera Compra</span>
+                  </button>
                 </div>
               ) : (
                 <div className="border border-stone-200 rounded-2xl overflow-hidden shadow-xs">
@@ -489,7 +694,7 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
                           <th className="py-2.5 px-3">Bolívares Egresados</th>
                           <th className="py-2.5 px-3">Origen ➔ Custodia</th>
                           <th className="py-2.5 px-3">Referencia</th>
-                          <th className="py-2.5 px-3 text-right">Acción</th>
+                          <th className="py-2.5 px-3 text-right">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-stone-100">
@@ -524,13 +729,22 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
                               {p.reference || '-'}
                             </td>
                             <td className="py-2.5 px-3 text-right">
-                              <button
-                                onClick={() => handleDeletePurchase(p.id, p.usdAmount)}
-                                className="p-1.5 text-stone-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Anular esta compra"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              <div className="inline-flex items-center gap-1">
+                                <button
+                                  onClick={() => handleStartEdit(p)}
+                                  className="p-1.5 text-stone-500 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-colors"
+                                  title="Editar esta compra"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeletePurchase(p.id, p.usdAmount)}
+                                  className="p-1.5 text-stone-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Anular/eliminar esta compra de la Cartera y Google Sheets"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -546,12 +760,14 @@ export const CrmDollarPurchaseModal: React.FC<CrmDollarPurchaseModalProps> = ({
         {/* Pie modal */}
         <div className="px-6 py-3.5 border-t border-stone-200 bg-stone-50 flex items-center justify-between shrink-0 text-xs text-stone-500">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Los dólares registrados se computan en tiempo real en los KPIs y en el PDF oficial.</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="truncate">
+              Toda compra registrada, editada o eliminada se sincroniza con Google Sheets y con los reportes PDF.
+            </span>
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-200 rounded-lg transition-colors"
+            className="px-4 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-200 rounded-lg transition-colors shrink-0"
           >
             Cerrar
           </button>
