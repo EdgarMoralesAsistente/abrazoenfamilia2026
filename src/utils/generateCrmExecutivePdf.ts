@@ -222,224 +222,255 @@ export async function generateCrmExecutivePdf(
   };
 
   // =========================================================================
-  // 3. SECCIÓN: 6 TARJETAS DE KPIS CON CARTERA DE DÓLARES (Y: 32 - 62)
+  // 3A. SECCIÓN: 5 TARJETAS DE KPIS OPERATIVOS (FILA 1, Y: 32 - 51)
   // =========================================================================
   const cardY = 32;
-  const cardH = 30;
-  const cardGap = 2;
+  const cardH = 19;
+  const cardGap = 2.5;
+  const cardW = 34.4;
 
   // --- TARJETA 1: TOTAL RESERVAS ---
   const x1 = 14;
-  const w1 = 27;
   doc.setFillColor(250, 250, 249);
   doc.setDrawColor(231, 229, 228);
-  doc.roundedRect(x1, cardY, w1, cardH, 2, 2, 'FD');
+  doc.roundedRect(x1, cardY, cardW, cardH, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.8);
+  doc.setFontSize(6.5);
   doc.setTextColor(120, 113, 108);
-  doc.text('TOTAL RESERVAS', x1 + 2.5, cardY + 5.5);
-
-  doc.setFontSize(14);
-  doc.setTextColor(28, 25, 23);
-  doc.text(`${kpis.totalReservas}`, x1 + 2.5, cardY + 13);
-
-  // Badge %
-  doc.setFillColor(236, 253, 245);
-  doc.roundedRect(x1 + w1 - 13, cardY + 8, 11, 4.5, 1, 1, 'F');
-  doc.setFontSize(5.5);
-  doc.setTextColor(4, 120, 87);
-  doc.text(`${pctReservasPagadas}%`, x1 + w1 - 11, cardY + 11.2);
-
-  // Barra de progreso
-  doc.setFillColor(229, 231, 235);
-  doc.roundedRect(x1 + 2.5, cardY + 17, w1 - 5, 2, 1, 1, 'F');
-  doc.setFillColor(5, 150, 105);
-  const wBar1 = ((w1 - 5) * Math.min(pctReservasPagadas, 100)) / 100;
-  if (wBar1 > 0) doc.roundedRect(x1 + 2.5, cardY + 17, wBar1, 2, 1, 1, 'F');
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(5.8);
-  doc.setTextColor(87, 83, 78);
-  doc.text(`${kpis.reservasPagadas} pagadas`, x1 + 2.5, cardY + 23.5);
-  doc.text(`${kpis.reservasPendientesPago} pendientes`, x1 + 2.5, cardY + 27);
-
-  // --- TARJETA 2: MONTO TOTAL (€) ---
-  const x2 = x1 + w1 + cardGap;
-  const w2 = 28;
-  doc.setFillColor(250, 250, 249);
-  doc.roundedRect(x2, cardY, w2, cardH, 2, 2, 'FD');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.8);
-  doc.setTextColor(120, 113, 108);
-  doc.text('MONTO TOTAL (€)', x2 + 2.5, cardY + 5.5);
+  doc.text('TOTAL RESERVAS', x1 + 2.5, cardY + 4.8);
 
   doc.setFontSize(12.5);
   doc.setTextColor(28, 25, 23);
-  doc.text(`${kpis.totalMontoEUR.toFixed(2)} €`, x2 + 2.5, cardY + 13);
+  doc.text(`${kpis.totalReservas}`, x1 + 2.5, cardY + 11.5);
 
   // Badge %
   doc.setFillColor(236, 253, 245);
-  doc.roundedRect(x2 + w2 - 12, cardY + 8, 10, 4.5, 1, 1, 'F');
-  doc.setFontSize(5.5);
-  doc.setTextColor(4, 120, 87);
-  doc.text(`${pctMontoRecaudado}%`, x2 + w2 - 11, cardY + 11.2);
-
-  // Barra de progreso
-  doc.setFillColor(229, 231, 235);
-  doc.roundedRect(x2 + 2.5, cardY + 17, w2 - 5, 2, 1, 1, 'F');
-  doc.setFillColor(5, 150, 105);
-  const wBar2 = ((w2 - 5) * Math.min(pctMontoRecaudadoNum, 100)) / 100;
-  if (wBar2 > 0) doc.roundedRect(x2 + 2.5, cardY + 17, wBar2, 2, 1, 1, 'F');
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(5.8);
-  doc.setTextColor(4, 120, 87);
-  doc.text(`${kpis.totalMontoRecaudadoEUR.toFixed(2)} € cobr.`, x2 + 2.5, cardY + 23.5);
-  doc.setTextColor(180, 83, 9);
-  doc.text(`Por cob: ${kpis.montoPendientePagoEUR.toFixed(2)} €`, x2 + 2.5, cardY + 27);
-
-  // --- TARJETA 3: CARTERA DÓLARES & COBERTURA CAMBIARIA (NUEVO) ---
-  const x3 = x2 + w2 + cardGap;
-  const w3 = 35;
-  doc.setFillColor(240, 253, 244); // Esmeralda suave
-  doc.setDrawColor(167, 243, 208);
-  doc.roundedRect(x3, cardY, w3, cardH, 2, 2, 'FD');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.8);
-  doc.setTextColor(6, 95, 70);
-  doc.text('CARTERA DÓLARES', x3 + 2.5, cardY + 5.5);
-
-  // Badge Anti-deval
-  doc.setFillColor(209, 250, 229);
-  doc.roundedRect(x3 + w3 - 14, cardY + 2.5, 12, 4.2, 1, 1, 'F');
+  doc.roundedRect(x1 + cardW - 13, cardY + 7.2, 11, 4.2, 1, 1, 'F');
   doc.setFontSize(5.2);
   doc.setTextColor(4, 120, 87);
-  doc.text('Anti-deval.', x3 + w3 - 13, cardY + 5.5);
+  doc.text(`${pctReservasPagadas}%`, x1 + cardW - 11, cardY + 10.2);
 
-  doc.setFontSize(13);
-  doc.setTextColor(6, 78, 59);
-  doc.text(`$${wallet.totalUsdPurchased.toFixed(0)} USD`, x3 + 2.5, cardY + 13);
-
-  // Barra de resguardo
+  // Barra de progreso
   doc.setFillColor(229, 231, 235);
-  doc.roundedRect(x3 + 2.5, cardY + 17, w3 - 5, 2, 1, 1, 'F');
+  doc.roundedRect(x1 + 2.5, cardY + 13.5, cardW - 5, 1.8, 0.8, 0.8, 'F');
   doc.setFillColor(5, 150, 105);
-  doc.roundedRect(x3 + 2.5, cardY + 17, (w3 - 5) * 0.9, 2, 1, 1, 'F');
+  const wBar1 = ((cardW - 5) * Math.min(pctReservasPagadas, 100)) / 100;
+  if (wBar1 > 0) doc.roundedRect(x1 + 2.5, cardY + 13.5, wBar1, 1.8, 0.8, 0.8, 'F');
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(5.8);
-  doc.setTextColor(180, 83, 9);
-  doc.text(`-${wallet.totalVesSpent.toLocaleString('es-VE', { maximumFractionDigits: 0 })} Bs. canjeados`, x3 + 2.5, cardY + 23.5);
+  doc.setFontSize(5.4);
   doc.setTextColor(87, 83, 78);
-  doc.text(`Tasa prom: ${wallet.averageExchangeRate.toFixed(2)} Bs/$`, x3 + 2.5, cardY + 27);
+  doc.text(`${kpis.reservasPagadas} pag. · ${kpis.reservasPendientesPago} pend.`, x1 + 2.5, cardY + 17.5);
 
-  // --- TARJETA 4: TOTAL PIEZAS ---
-  const x4 = x3 + w3 + cardGap;
-  const w4 = 27;
+  // --- TARJETA 2: MONTO TOTAL (€) ---
+  const x2 = x1 + cardW + cardGap;
   doc.setFillColor(250, 250, 249);
-  doc.setDrawColor(231, 229, 228);
-  doc.roundedRect(x4, cardY, w4, cardH, 2, 2, 'FD');
+  doc.roundedRect(x2, cardY, cardW, cardH, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.8);
+  doc.setFontSize(6.5);
   doc.setTextColor(120, 113, 108);
-  doc.text('TOTAL PIEZAS', x4 + 2.5, cardY + 5.5);
+  doc.text('MONTO TOTAL (€)', x2 + 2.5, cardY + 4.8);
 
-  doc.setFontSize(14);
+  doc.setFontSize(11.5);
   doc.setTextColor(28, 25, 23);
-  doc.text(`${kpis.totalPiezas}`, x4 + 2.5, cardY + 13);
+  doc.text(`${kpis.totalMontoEUR.toFixed(2)} €`, x2 + 2.5, cardY + 11.5);
 
-  doc.setFillColor(254, 243, 199);
-  doc.roundedRect(x4 + w4 - 12, cardY + 8, 10, 4.5, 1, 1, 'F');
-  doc.setFontSize(5.5);
-  doc.setTextColor(146, 64, 14);
-  doc.text(`${kpis.totalKits} kits`, x4 + w4 - 11, cardY + 11.2);
+  // Badge %
+  doc.setFillColor(236, 253, 245);
+  doc.roundedRect(x2 + cardW - 13, cardY + 7.2, 11, 4.2, 1, 1, 'F');
+  doc.setFontSize(5.2);
+  doc.setTextColor(4, 120, 87);
+  doc.text(`${pctMontoRecaudado}%`, x2 + cardW - 11.2, cardY + 10.2);
+
+  // Barra de progreso
+  doc.setFillColor(229, 231, 235);
+  doc.roundedRect(x2 + 2.5, cardY + 13.5, cardW - 5, 1.8, 0.8, 0.8, 'F');
+  doc.setFillColor(5, 150, 105);
+  const wBar2 = ((cardW - 5) * Math.min(pctMontoRecaudadoNum, 100)) / 100;
+  if (wBar2 > 0) doc.roundedRect(x2 + 2.5, cardY + 13.5, wBar2, 1.8, 0.8, 0.8, 'F');
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(5.8);
-  doc.setTextColor(87, 83, 78);
-  doc.text(`${kpis.totalAfiches} afiches · ${kpis.totalGuias} guías`, x4 + 2.5, cardY + 23.5);
-  doc.text(`${kpis.totalHojas} hojas niños`, x4 + 2.5, cardY + 27);
+  doc.setFontSize(5.4);
+  doc.setTextColor(4, 120, 87);
+  doc.text(`${kpis.totalMontoRecaudadoEUR.toFixed(2)} € cobrado`, x2 + 2.5, cardY + 17.5);
 
-  // --- TARJETA 5: POR COBRAR ---
-  const x5 = x4 + w4 + cardGap;
-  const w5 = 28;
+  // --- TARJETA 3: TOTAL PIEZAS ---
+  const x3 = x2 + cardW + cardGap;
   doc.setFillColor(250, 250, 249);
-  doc.roundedRect(x5, cardY, w5, cardH, 2, 2, 'FD');
+  doc.roundedRect(x3, cardY, cardW, cardH, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.8);
+  doc.setFontSize(6.5);
   doc.setTextColor(120, 113, 108);
-  doc.text('POR COBRAR', x5 + 2.5, cardY + 5.5);
+  doc.text('TOTAL PIEZAS', x3 + 2.5, cardY + 4.8);
 
   doc.setFontSize(12.5);
-  doc.setTextColor(180, 83, 9);
-  doc.text(`${kpis.montoPendientePagoEUR.toFixed(2)} €`, x5 + 2.5, cardY + 13);
+  doc.setTextColor(28, 25, 23);
+  doc.text(`${kpis.totalPiezas}`, x3 + 2.5, cardY + 11.5);
+
+  doc.setFillColor(254, 243, 199);
+  doc.roundedRect(x3 + cardW - 13, cardY + 7.2, 11, 4.2, 1, 1, 'F');
+  doc.setFontSize(5.2);
+  doc.setTextColor(146, 64, 14);
+  doc.text(`${kpis.totalKits} kits`, x3 + cardW - 11.5, cardY + 10.2);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(5.8);
+  doc.setFontSize(5.4);
   doc.setTextColor(87, 83, 78);
-  doc.text(`${kpis.reservasPendientesPago} res. pendientes`, x5 + 2.5, cardY + 20);
+  doc.text(`${kpis.totalAfiches} af. · ${kpis.totalGuias} g. · ${kpis.totalHojas} h.`, x3 + 2.5, cardY + 17.5);
+
+  // --- TARJETA 4: POR COBRAR ---
+  const x4 = x3 + cardW + cardGap;
+  doc.setFillColor(250, 250, 249);
+  doc.roundedRect(x4, cardY, cardW, cardH, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.5);
+  doc.setTextColor(120, 113, 108);
+  doc.text('POR COBRAR', x4 + 2.5, cardY + 4.8);
+
+  doc.setFontSize(11.5);
+  doc.setTextColor(180, 83, 9);
+  doc.text(`${kpis.montoPendientePagoEUR.toFixed(2)} €`, x4 + 2.5, cardY + 11.5);
 
   if (kpis.reservasVerificando > 0) {
     doc.setFillColor(239, 246, 255);
-    doc.roundedRect(x5 + 2.5, cardY + 22.5, w5 - 5, 4.5, 1, 1, 'F');
+    doc.roundedRect(x4 + cardW - 14, cardY + 7.2, 12, 4.2, 1, 1, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(5.5);
+    doc.setFontSize(5);
     doc.setTextColor(29, 78, 216);
-    doc.text(`${kpis.reservasVerificando} por conciliar`, x5 + 3.5, cardY + 25.8);
-  } else {
-    doc.setTextColor(5, 150, 105);
-    doc.text('Pagos verificados', x5 + 2.5, cardY + 25);
+    doc.text(`${kpis.reservasVerificando} conc.`, x4 + cardW - 13, cardY + 10.2);
   }
 
-  // --- TARJETA 6: LOGÍSTICA / DESPACHO ---
-  const x6 = x5 + w5 + cardGap;
-  const w6 = 27;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(5.4);
+  doc.setTextColor(87, 83, 78);
+  doc.text(`${kpis.reservasPendientesPago} res. pendientes`, x4 + 2.5, cardY + 17.5);
+
+  // --- TARJETA 5: LOGÍSTICA / DESPACHO ---
+  const x5 = x4 + cardW + cardGap;
   doc.setFillColor(250, 250, 249);
-  doc.roundedRect(x6, cardY, w6, cardH, 2, 2, 'FD');
+  doc.roundedRect(x5, cardY, cardW, cardH, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.8);
+  doc.setFontSize(6.5);
   doc.setTextColor(120, 113, 108);
-  doc.text('DESPACHO', x6 + 2.5, cardY + 5.5);
+  doc.text('DESPACHO', x5 + 2.5, cardY + 4.8);
 
-  doc.setFontSize(14);
+  doc.setFontSize(12.5);
   doc.setTextColor(28, 25, 23);
-  doc.text(`${pctEntregas}%`, x6 + 2.5, cardY + 13);
+  doc.text(`${pctEntregas}%`, x5 + 2.5, cardY + 11.5);
 
   doc.setFillColor(245, 245, 244);
-  doc.roundedRect(x6 + w6 - 12, cardY + 8, 10, 4.5, 1, 1, 'F');
-  doc.setFontSize(5.5);
+  doc.roundedRect(x5 + cardW - 13, cardY + 7.2, 11, 4.2, 1, 1, 'F');
+  doc.setFontSize(5.2);
   doc.setTextColor(87, 83, 78);
-  doc.text(`${kpis.entregasCompletadas} ok`, x6 + w6 - 10, cardY + 11.2);
+  doc.text(`${kpis.entregasCompletadas} ok`, x5 + cardW - 11, cardY + 10.2);
 
   // Barra de despacho
   doc.setFillColor(229, 231, 235);
-  doc.roundedRect(x6 + 2.5, cardY + 17, w6 - 5, 2, 1, 1, 'F');
+  doc.roundedRect(x5 + 2.5, cardY + 13.5, cardW - 5, 1.8, 0.8, 0.8, 'F');
   doc.setFillColor(68, 64, 60);
-  const wBar6 = ((w6 - 5) * Math.min(pctEntregas, 100)) / 100;
-  if (wBar6 > 0) doc.roundedRect(x6 + 2.5, cardY + 17, wBar6, 2, 1, 1, 'F');
+  const wBar5 = ((cardW - 5) * Math.min(pctEntregas, 100)) / 100;
+  if (wBar5 > 0) doc.roundedRect(x5 + 2.5, cardY + 13.5, wBar5, 1.8, 0.8, 0.8, 'F');
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(5.8);
+  doc.setFontSize(5.4);
   doc.setTextColor(87, 83, 78);
-  doc.text(`${kpis.entregasCompletadas} en destino`, x6 + 2.5, cardY + 23.5);
-  doc.text(`${kpis.entregasPendientes} en ruta/Caracas`, x6 + 2.5, cardY + 27);
+  doc.text(`${kpis.entregasCompletadas} en destino · ${kpis.entregasPendientes} ruta`, x5 + 2.5, cardY + 17.5);
 
   // =========================================================================
-  // 4. SECCIÓN CENTRAL: MATERIALES SOLICITADOS (CARACAS) & COMPARATIVA PARROQUIAS/COLEGIOS (Y: 66 - 158)
+  // 3B. SECCIÓN: DISPONIBILIDAD FINANCIERA (FILA 2, Y: 53 - 73)
+  // Tarjetas de Disponibilidad en Bolívares y Disponibilidad en Dólares
   // =========================================================================
-  const sec2Y = 65;
+  const row2Y = 53;
+  const row2H = 20;
+  const row2W = 89;
+  const row2Gap = 4;
+
+  // --- TARJETA 1 DE FILA 2: DISPONIBILIDAD EN BOLÍVARES (VES) ---
+  const vesX = 14;
+  doc.setFillColor(255, 253, 245);
+  doc.setDrawColor(245, 158, 11);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(vesX, row2Y, row2W, row2H, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.2);
+  doc.setTextColor(146, 64, 14);
+  doc.text('DISPONIBILIDAD EN BOLÍVARES (VES)', vesX + 3.5, row2Y + 4.8);
+
+  // Badge Saldo Neto
+  doc.setFillColor(254, 243, 199);
+  doc.roundedRect(vesX + row2W - 35, row2Y + 1.8, 33, 4.2, 1, 1, 'F');
+  doc.setFontSize(5);
+  doc.setTextColor(146, 64, 14);
+  doc.text('SALDO NETO EN CUENTAS/CAJA', vesX + row2W - 33.5, row2Y + 4.8);
+
+  // Monto Grande en Bs
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12.5);
+  doc.setTextColor(28, 25, 23);
+  doc.text(`Bs. ${wallet.availableVesBalance.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, vesX + 3.5, row2Y + 11.2);
+
+  // Desglose de la fórmula del usuario
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(5.6);
+  doc.setTextColor(4, 120, 87);
+  doc.text(`(+) Recaudado en reservas cobradas: Bs. ${wallet.totalVesCollectedEstimated.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, vesX + 3.5, row2Y + 15.2);
+
+  doc.setTextColor(180, 83, 9);
+  doc.text(`(-) Usado en compras de USD: -Bs. ${wallet.totalVesSpent.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, vesX + 3.5, row2Y + 18.5);
+
+  // --- TARJETA 2 DE FILA 2: DISPONIBILIDAD EN DÓLARES (USD) - CARTERA DE DÓLARES ---
+  const usdX = vesX + row2W + row2Gap;
+  doc.setFillColor(240, 253, 244);
+  doc.setDrawColor(16, 185, 129);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(usdX, row2Y, row2W, row2H, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.2);
+  doc.setTextColor(6, 95, 70);
+  doc.text('DISPONIBILIDAD EN DÓLARES (USD)', usdX + 3.5, row2Y + 4.8);
+
+  // Badge Cobertura
+  doc.setFillColor(209, 250, 229);
+  doc.roundedRect(usdX + row2W - 35, row2Y + 1.8, 33, 4.2, 1, 1, 'F');
+  doc.setFontSize(5);
+  doc.setTextColor(4, 120, 87);
+  doc.text('CARTERA & PROTECCIÓN ANTI-DEVAL.', usdX + row2W - 33.5, row2Y + 4.8);
+
+  // Monto Grande en USD
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12.5);
+  doc.setTextColor(6, 78, 59);
+  doc.text(`$${wallet.totalUsdPurchased.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`, usdX + 3.5, row2Y + 11.2);
+
+  // Desglose de la cartera
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(5.6);
+  doc.setTextColor(87, 83, 78);
+  doc.text(`• Compras registradas: ${wallet.purchaseCount} ops  ·  Tasa prom: ${wallet.averageExchangeRate > 0 ? wallet.averageExchangeRate.toFixed(2) : '0.00'} Bs/$`, usdX + 3.5, row2Y + 15.2);
+
+  doc.setTextColor(5, 150, 105);
+  doc.text(`• Última tasa registrada: ${wallet.lastExchangeRate > 0 ? wallet.lastExchangeRate.toFixed(2) : '44.50'} Bs/$  ·  Fondo de resguardo patrimonial`, usdX + 3.5, row2Y + 18.5);
+
+  // Restaurar ancho de línea estándar
+  doc.setLineWidth(0.2);
+
+  // =========================================================================
+  // 4. SECCIÓN CENTRAL: MATERIALES SOLICITADOS (CARACAS) & COMPARATIVA PARROQUIAS/COLEGIOS (Y: 75 - 163)
+  // =========================================================================
+  const sec2Y = 75;
 
   // -------------------------------------------------------------------------
   // 4A. BLOQUE IZQUIERDO: MATERIALES SOLICITADOS PARA CARACAS (IMPRENTA)
   // -------------------------------------------------------------------------
   const matW = 106;
-  const matH = 92;
+  const matH = 88;
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(229, 231, 235);
   doc.roundedRect(14, sec2Y, matW, matH, 3, 3, 'FD');
@@ -448,20 +479,20 @@ export async function generateCrmExecutivePdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(28, 25, 23);
-  doc.text('MATERIALES SOLICITADOS PARA CARACAS (IMPRENTA)', 19, sec2Y + 7);
+  doc.text('MATERIALES SOLICITADOS PARA CARACAS (IMPRENTA)', 19, sec2Y + 6.5);
 
   // Badge Total piezas
   doc.setFillColor(254, 243, 199);
   doc.setDrawColor(217, 119, 6);
-  doc.roundedRect(14 + matW - 38, sec2Y + 3, 33, 5.5, 1.5, 1.5, 'FD');
+  doc.roundedRect(14 + matW - 38, sec2Y + 2.5, 33, 5.2, 1.5, 1.5, 'FD');
   doc.setFontSize(7);
   doc.setTextColor(146, 64, 14);
-  doc.text(`Total: ${kpis.totalPiezas} piezas`, 14 + matW - 35, sec2Y + 6.8);
+  doc.text(`Total: ${kpis.totalPiezas} piezas`, 14 + matW - 35, sec2Y + 6.2);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7.2);
   doc.setTextColor(120, 113, 108);
-  doc.text('Cantidades requeridas para orden nacional de producción con cantidad visible en cada barra:', 19, sec2Y + 12);
+  doc.text('Cantidades requeridas para orden nacional de producción con cantidad visible en cada barra:', 19, sec2Y + 11);
 
   // Barras de Materiales
   const materialsList = [
@@ -472,47 +503,47 @@ export async function generateCrmExecutivePdf(
   ];
 
   const maxMat = Math.max(...materialsList.map((m) => m.count), 1);
-  let barY = sec2Y + 17;
+  let barY = sec2Y + 15;
 
   materialsList.forEach((mat) => {
     // Fila de texto
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(28, 25, 23);
-    doc.text(mat.label, 19, barY + 3.5);
+    doc.text(mat.label, 19, barY + 3.2);
 
     // Cantidad explícita destacada
-    doc.setFontSize(10);
+    doc.setFontSize(9.5);
     doc.setTextColor(mat.color[0], mat.color[1], mat.color[2]);
-    doc.text(`${mat.count} unidades`, 19 + matW - 32, barY + 3.5);
+    doc.text(`${mat.count} unidades`, 19 + matW - 32, barY + 3.2);
 
     // Barra de progreso fondo
     doc.setFillColor(245, 245, 244);
-    doc.roundedRect(19, barY + 5.5, matW - 10, 5, 1.5, 1.5, 'F');
+    doc.roundedRect(19, barY + 5, matW - 10, 4.5, 1.2, 1.2, 'F');
 
     // Barra relleno con proporción
     const pct = Math.max((mat.count / maxMat), 0.08);
     const fillWidth = (matW - 10) * pct;
     doc.setFillColor(mat.color[0], mat.color[1], mat.color[2]);
-    doc.roundedRect(19, barY + 5.5, fillWidth, 5, 1.5, 1.5, 'F');
+    doc.roundedRect(19, barY + 5, fillWidth, 4.5, 1.2, 1.2, 'F');
 
     // Etiqueta de cantidad sobre la barra
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setTextColor(255, 255, 255);
-    doc.text(`${mat.count}`, 22, barY + 9.2);
+    doc.text(`${mat.count}`, 22, barY + 8.4);
 
     // Subnota
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
+    doc.setFontSize(6.2);
     doc.setTextColor(120, 113, 108);
-    doc.text(mat.note, 19, barY + 14);
+    doc.text(mat.note, 19, barY + 12.8);
 
-    barY += 16;
+    barY += 15;
   });
 
   // Mini resumen en 4 columnas
-  const miniY = sec2Y + matH - 12;
+  const miniY = sec2Y + matH - 11;
   const miniW = (matW - 12) / 4;
   const miniLabels = [
     { title: 'KITS', val: `${kpis.totalKits}`, bg: [254, 243, 199] as [number, number, number], c: [146, 64, 14] as [number, number, number] },
@@ -539,7 +570,7 @@ export async function generateCrmExecutivePdf(
   // -------------------------------------------------------------------------
   const compX = 124;
   const compW = 72;
-  const compH = 92;
+  const compH = 88;
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(229, 231, 235);
   doc.roundedRect(compX, sec2Y, compW, compH, 3, 3, 'FD');
@@ -547,17 +578,17 @@ export async function generateCrmExecutivePdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(28, 25, 23);
-  doc.text('COMPARATIVA INSTITUCIONAL', compX + 5, sec2Y + 7);
+  doc.text('COMPARATIVA INSTITUCIONAL', compX + 5, sec2Y + 6.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7.2);
   doc.setTextColor(120, 113, 108);
-  doc.text('Parroquias vs Colegios de la Arquidiócesis:', compX + 5, sec2Y + 12);
+  doc.text('Parroquias vs Colegios de la Arquidiócesis:', compX + 5, sec2Y + 11);
 
   // Tarjetas lado a lado Parroquias vs Colegios
   const sideW = (compW - 13) / 2;
-  const sideH = 40;
-  const sideY = sec2Y + 15;
+  const sideH = 37;
+  const sideY = sec2Y + 14;
 
   // Parroquia
   doc.setFillColor(254, 243, 199); // Amber 50
@@ -570,15 +601,15 @@ export async function generateCrmExecutivePdf(
   doc.text(`PARROQUIAS (${pctParroquias}%)`, compX + 7, sideY + 5.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7.2);
   doc.setTextColor(28, 25, 23);
-  doc.text(`• Reservas: ${kpis.totalParroquias}`, compX + 7, sideY + 12);
-  doc.text(`• Piezas: ${kpis.piezasParroquias}`, compX + 7, sideY + 18);
-  doc.text(`• Kits: ${kpis.totalKits}`, compX + 7, sideY + 24);
+  doc.text(`• Reservas: ${kpis.totalParroquias}`, compX + 7, sideY + 11.5);
+  doc.text(`• Piezas: ${kpis.piezasParroquias}`, compX + 7, sideY + 17);
+  doc.text(`• Kits: ${kpis.totalKits}`, compX + 7, sideY + 22.5);
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(146, 64, 14);
-  doc.text(`Aporte: ${kpis.montoParroquiasEUR.toFixed(2)} €`, compX + 7, sideY + 34);
+  doc.text(`Aporte: ${kpis.montoParroquiasEUR.toFixed(2)} €`, compX + 7, sideY + 32);
 
   // Colegios
   const colX = compX + 5 + sideW + 3;
@@ -592,45 +623,45 @@ export async function generateCrmExecutivePdf(
   doc.text(`COLEGIOS (${pctColegios}%)`, colX + 2, sideY + 5.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7.2);
   doc.setTextColor(28, 25, 23);
-  doc.text(`• Reservas: ${kpis.totalColegios}`, colX + 2, sideY + 12);
-  doc.text(`• Piezas: ${kpis.piezasColegios}`, colX + 2, sideY + 18);
-  doc.text(`• Kits: ${kpis.totalColegios}`, colX + 2, sideY + 24);
+  doc.text(`• Reservas: ${kpis.totalColegios}`, colX + 2, sideY + 11.5);
+  doc.text(`• Piezas: ${kpis.piezasColegios}`, colX + 2, sideY + 17);
+  doc.text(`• Kits: ${kpis.totalColegios}`, colX + 2, sideY + 22.5);
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(2, 132, 199);
-  doc.text(`Aporte: ${kpis.montoColegiosEUR.toFixed(2)} €`, colX + 2, sideY + 34);
+  doc.text(`Aporte: ${kpis.montoColegiosEUR.toFixed(2)} €`, colX + 2, sideY + 32);
 
   // Barra de Distribución Porcentual
-  const distY = sideY + sideH + 6;
+  const distY = sideY + sideH + 4;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7.2);
   doc.setTextColor(87, 83, 78);
   doc.text('Distribución de Demanda:', compX + 5, distY);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${pctParroquias}% Parroquias  ·  ${pctColegios}% Colegios`, compX + 5, distY + 4.5);
+  doc.text(`${pctParroquias}% Parroquias  ·  ${pctColegios}% Colegios`, compX + 5, distY + 4);
 
   // Barra bicolor
   const barDistW = compW - 10;
   doc.setFillColor(146, 64, 14); // Parroquias
   const wPar = (barDistW * pctParroquias) / 100;
-  if (wPar > 0) doc.roundedRect(compX + 5, distY + 6.5, wPar, 4, 1, 1, 'F');
+  if (wPar > 0) doc.roundedRect(compX + 5, distY + 5.5, wPar, 3.5, 1, 1, 'F');
 
   doc.setFillColor(2, 132, 199); // Colegios
   const wCol = barDistW - wPar;
-  if (wCol > 0) doc.roundedRect(compX + 5 + wPar, distY + 6.5, wCol, 4, 1, 1, 'F');
+  if (wCol > 0) doc.roundedRect(compX + 5 + wPar, distY + 5.5, wCol, 3.5, 1, 1, 'F');
 
-  doc.setFontSize(6.5);
+  doc.setFontSize(6.2);
   doc.setTextColor(120, 113, 108);
-  doc.text(`Total registrado: ${totalInst} instituciones arquidiocesanas`, compX + 5, distY + 17);
+  doc.text(`Total registrado: ${totalInst} instituciones arquidiocesanas`, compX + 5, distY + 15);
 
   // =========================================================================
-  // 5. SECCIÓN INFERIOR: FINANZAS, LOGÍSTICA & TOMA DE DECISIONES (Y: 161 - 263)
+  // 5. SECCIÓN INFERIOR: FINANZAS, LOGÍSTICA & TOMA DE DECISIONES (Y: 166 - 263)
   // =========================================================================
-  const sec3Y = 161;
+  const sec3Y = 166;
   const col3W = 58;
-  const col3H = 96;
+  const col3H = 97;
 
   // -------------------------------------------------------------------------
   // 5A. COLUMNA 1: ESTADO DE COBRANZAS Y RECAUDACIÓN

@@ -17,7 +17,9 @@ import {
   Calendar,
   Printer,
   ExternalLink,
-  Check
+  Check,
+  Coins,
+  DollarSign
 } from 'lucide-react';
 import { CrmReservation, CrmKPIs } from '../../types/reservation';
 import { CrmUser } from '../../types/auth';
@@ -317,10 +319,10 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
             </header>
 
             {/* ============================================================== */}
-            {/* FILA 1: TARJETAS DE KPIS CON BARRAS DE PROGRESO */}
+            {/* FILA 1: TARJETAS DE KPIS OPERATIVOS (5 COLUMNAS) */}
             {/* ============================================================== */}
-            <section className="my-2.5">
-              <div className="grid grid-cols-6 gap-2">
+            <section className="my-2 space-y-2">
+              <div className="grid grid-cols-5 gap-2">
                 {/* KPI 1: Total Reservas con Barra Hechas vs Pagadas */}
                 <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
                   <div className="flex items-center justify-between text-stone-500 text-[8.5px] font-bold uppercase tracking-wider">
@@ -375,33 +377,7 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
                   </div>
                 </div>
 
-                {/* KPI 3: CARTERA DÓLARES (ANTI-DEVALUACIÓN) */}
-                <div className="p-2 rounded-xl border border-emerald-300 bg-emerald-50/70 flex flex-col justify-between">
-                  <div className="flex items-center justify-between text-emerald-900 text-[8.5px] font-bold uppercase tracking-wider">
-                    <span>Cartera USD</span>
-                    <span className="text-[7.5px] font-extrabold text-emerald-800 bg-emerald-100 px-1 rounded-sm">
-                      Anti-deval
-                    </span>
-                  </div>
-                  <div className="my-0.5">
-                    <span className="text-base font-black text-emerald-800 font-mono block leading-none tabular-nums">
-                      ${wallet.totalUsdPurchased.toFixed(0)} USD
-                    </span>
-                    <span className="text-[8.5px] font-bold text-amber-900 font-mono block mt-0.5 truncate tabular-nums">
-                      -{wallet.totalVesSpent.toLocaleString('es-VE', { maximumFractionDigits: 0 })} Bs.
-                    </span>
-                  </div>
-                  <div>
-                    <div className="w-full bg-emerald-200 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-emerald-600 h-1.5 rounded-full w-[90%]" />
-                    </div>
-                    <span className="text-[8px] text-stone-600 block mt-0.5 truncate font-medium">
-                      Tasa: {wallet.averageExchangeRate.toFixed(2)} Bs/$
-                    </span>
-                  </div>
-                </div>
-
-                {/* KPI 4: Total Piezas Impresas */}
+                {/* KPI 3: Total Piezas Impresas */}
                 <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
                   <div className="flex items-center justify-between text-stone-500 text-[8.5px] font-bold uppercase tracking-wider">
                     <span>Piezas</span>
@@ -420,7 +396,7 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
                   </div>
                 </div>
 
-                {/* KPI 5: Pagos Pendientes */}
+                {/* KPI 4: Pagos Pendientes */}
                 <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
                   <div className="flex items-center justify-between text-stone-500 text-[8.5px] font-bold uppercase tracking-wider">
                     <span>Por Cobrar</span>
@@ -431,17 +407,17 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
                       {kpis.montoPendientePagoEUR.toFixed(2)} €
                     </span>
                     <span className="text-[8.5px] font-bold text-stone-600 block mt-0.5">
-                      {kpis.reservasPendientesPago} solicitudes
+                      {kpis.reservasPendientesPago} pendientes
                     </span>
                   </div>
                   <div className="text-[8px] text-stone-500 font-medium truncate">
                     {kpis.reservasVerificando > 0
                       ? `${kpis.reservasVerificando} por conciliar`
-                      : 'Pagos conciliados'}
+                      : 'Pagos al día'}
                   </div>
                 </div>
 
-                {/* KPI 6: Logística y Entregas */}
+                {/* KPI 5: Logística y Entregas */}
                 <div className="p-2 rounded-xl border border-stone-200 bg-stone-50 flex flex-col justify-between">
                   <div className="flex items-center justify-between text-stone-500 text-[8.5px] font-bold uppercase tracking-wider">
                     <span>Despacho</span>
@@ -465,6 +441,75 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
                     <span className="text-[8px] text-stone-500 block mt-0.5 truncate font-medium">
                       {kpis.entregasPendientes} en ruta/Caracas
                     </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ============================================================== */}
+              {/* FILA 2: DISPONIBILIDAD FINANCIERA (BOLÍVARES & DÓLARES) */}
+              {/* ============================================================== */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* TARJETA 1 DE FILA 2: DISPONIBILIDAD EN BOLÍVARES */}
+                <div className="p-2.5 rounded-xl border border-amber-300/80 bg-amber-50/50 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-amber-950 text-[9px] font-bold uppercase tracking-wider">
+                      <Coins className="w-3 h-3 text-amber-800" />
+                      <span>Disponibilidad en Bolívares (VES)</span>
+                    </div>
+                    <span className="text-[7.5px] font-extrabold text-amber-800 bg-amber-100/90 px-1.5 py-0.5 rounded">
+                      Saldo Neto
+                    </span>
+                  </div>
+                  <div className="my-1">
+                    <span className="text-base sm:text-lg font-black text-stone-900 font-mono block leading-none tabular-nums">
+                      Bs. {wallet.availableVesBalance.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="pt-1 border-t border-amber-200/60 text-[8px] space-y-0.5">
+                    <div className="flex items-center justify-between text-stone-600">
+                      <span>(+) Reservas cobradas:</span>
+                      <span className="font-bold text-emerald-800 font-mono">
+                        +Bs. {wallet.totalVesCollectedEstimated.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-stone-600">
+                      <span>(-) Usado para comprar USD:</span>
+                      <span className="font-bold text-amber-900 font-mono">
+                        -Bs. {wallet.totalVesSpent.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* TARJETA 2 DE FILA 2: DISPONIBILIDAD EN DÓLARES (USD) */}
+                <div className="p-2.5 rounded-xl border border-emerald-300 bg-emerald-50/70 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-emerald-950 text-[9px] font-bold uppercase tracking-wider">
+                      <DollarSign className="w-3 h-3 text-emerald-700" />
+                      <span>Disponibilidad en Dólares (USD)</span>
+                    </div>
+                    <span className="text-[7.5px] font-extrabold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
+                      Anti-Devaluación
+                    </span>
+                  </div>
+                  <div className="my-1">
+                    <span className="text-base sm:text-lg font-black text-emerald-800 font-mono block leading-none tabular-nums">
+                      ${wallet.totalUsdPurchased.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                    </span>
+                  </div>
+                  <div className="pt-1 border-t border-emerald-200/70 text-[8px] space-y-0.5">
+                    <div className="flex items-center justify-between text-stone-600">
+                      <span>Sumatoria compras registradas:</span>
+                      <span className="font-bold text-stone-900 font-mono">
+                        {wallet.purchaseCount} ops
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-stone-600">
+                      <span>Tasa promedio ponderada:</span>
+                      <span className="font-bold text-emerald-800 font-mono">
+                        {wallet.averageExchangeRate > 0 ? wallet.averageExchangeRate.toFixed(2) : '0.00'} Bs/$
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

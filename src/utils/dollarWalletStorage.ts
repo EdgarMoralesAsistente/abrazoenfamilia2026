@@ -177,23 +177,18 @@ export function calculateDollarWalletSummary(
 
   const averageRate = totalUsd > 0 ? totalVesSpent / totalUsd : 0;
 
-  // Estimar los Bolívares ingresados/recaudados de las reservas en estado Pagado
+  // Sumatoria de todas las reservas cobradas en Bolívares
+  const rateToUse = lastRate > 0 ? lastRate : fallbackRate;
   let totalVesCollectedEstimated = 0;
   reservations.forEach((r) => {
     if (r.paymentStatus === 'Pagado') {
       const eur = Number(r.totalEUR || 0);
-      const isPagoMovil =
-        !r.paymentMethod ||
-        r.paymentMethod.toLowerCase().includes('móvil') ||
-        r.paymentMethod.toLowerCase().includes('movil') ||
-        r.paymentMethod.toLowerCase().includes('transferencia');
-      if (isPagoMovil) {
-        totalVesCollectedEstimated += eur * (lastRate > 0 ? lastRate : fallbackRate);
-      }
+      totalVesCollectedEstimated += eur * rateToUse;
     }
   });
 
-  const availableVesBalance = Math.max(0, totalVesCollectedEstimated - totalVesSpent);
+  // Los bolívares es la sumatoria de todas las reservas cobradas menos los bolívares usados para comprar/registrar dólares
+  const availableVesBalance = totalVesCollectedEstimated - totalVesSpent;
 
   return {
     totalUsdPurchased: totalUsd,
