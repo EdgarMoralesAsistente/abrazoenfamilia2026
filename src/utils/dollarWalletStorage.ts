@@ -1,4 +1,4 @@
-import { DollarPurchase, DollarWalletSummary, CrmReservation } from '../types/reservation';
+import { DollarPurchase, DollarWalletSummary, CrmReservation, WalletBreakdownItem } from '../types/reservation';
 import {
   createDollarPurchaseInSheets,
   updateDollarPurchaseInSheets,
@@ -161,18 +161,31 @@ export function removeDollarPurchase(id: string, operator: string = 'Administrad
 export function calculateDollarWalletSummary(
   purchases: DollarPurchase[],
   reservations: CrmReservation[] = [],
-  fallbackRate: number = 44.5
+  fallbackRate: number = 44.5,
+  expensesVES: number = 0,
+  expensesUSD: number = 0
 ): DollarWalletSummary {
   let totalUsd = 0;
   let totalVesSpent = 0;
   let lastRate = fallbackRate;
 
+  // Agrupar compras por destino / cartera para discriminación
+  const walletMap: Record<string, { amount: number; count: number }> = {};
+
   purchases.forEach((p, idx) => {
-    totalUsd += Number(p.usdAmount || 0);
+    const usd = Number(p.usdAmount || 0);
+    totalUsd += usd;
     totalVesSpent += Number(p.vesAmount || 0);
     if (idx === 0 && p.exchangeRate) {
       lastRate = Number(p.exchangeRate);
     }
+
+    const wName = (p.destinationWallet || 'Bóveda / Efectivo Pastoral').trim();
+    if (!walletMap[wName]) {
+      walletMap[wName] = { amount: 0, count: 0 };
+    }
+    walletMap[wName].amount += usd;
+    walletMap[wName].count += 1;
   });
 
   const averageRate = totalUsd > 0 ? totalVesSpent / totalUsd : 0;
@@ -187,8 +200,17 @@ export function calculateDollarWalletSummary(
     }
   });
 
-  // Los bolívares es la sumatoria de todas las reservas cobradas menos los bolívares usados para comprar/registrar dólares
-  const availableVesBalance = totalVesCollectedEstimated - totalVesSpent;
+  // Disponibilidad en Bolívares luego de restarle las salidas y las compras de dólares
+  const availableVesBalance = totalVesCollectedEstimated - totalVesSpent - expensesVES;
+
+  const walletBreakdown: WalletBreakdownItem[] = Object.entries(walletMap)
+    .map(([wallet, data]) => ({
+      wallet,
+      amountUSD: data.amount,
+      count: data.count,
+      percentage: totalUsd > 0 ? (data.amount / totalUsd) * 100 : 0
+    }))
+    .sort((a, b) => b.amountUSD - a.amountUSD);
 
   return {
     totalUsdPurchased: totalUsd,
@@ -197,6 +219,9 @@ export function calculateDollarWalletSummary(
     lastExchangeRate: lastRate,
     purchaseCount: purchases.length,
     totalVesCollectedEstimated,
-    availableVesBalance
+    availableVesBalance,
+    walletBreakdown,
+    totalExpensesVES: expensesVES,
+    totalExpensesUSD: expensesUSD
   };
 }

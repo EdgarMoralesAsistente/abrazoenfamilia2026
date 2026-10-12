@@ -422,7 +422,8 @@ export async function generateCrmExecutivePdf(
   doc.text(`(+) Recaudado en reservas cobradas: Bs. ${wallet.totalVesCollectedEstimated.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, vesX + 3.5, row2Y + 15.2);
 
   doc.setTextColor(180, 83, 9);
-  doc.text(`(-) Usado en compras de USD: -Bs. ${wallet.totalVesSpent.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, vesX + 3.5, row2Y + 18.5);
+  const totalSalidasYUsd = wallet.totalVesSpent + (wallet.totalExpensesVES || 0);
+  doc.text(`(-) Salidas (-Bs. ${(wallet.totalExpensesVES || 0).toLocaleString('es-VE', { maximumFractionDigits: 0 })}) y compra USD: -Bs. ${totalSalidasYUsd.toLocaleString('es-VE', { maximumFractionDigits: 0 })}`, vesX + 3.5, row2Y + 18.5);
 
   // --- TARJETA 2 DE FILA 2: DISPONIBILIDAD EN DÓLARES (USD) - CARTERA DE DÓLARES ---
   const usdX = vesX + row2W + row2Gap;
@@ -455,8 +456,11 @@ export async function generateCrmExecutivePdf(
   doc.setTextColor(87, 83, 78);
   doc.text(`• Compras registradas: ${wallet.purchaseCount} ops  ·  Tasa prom: ${wallet.averageExchangeRate > 0 ? wallet.averageExchangeRate.toFixed(2) : '0.00'} Bs/$`, usdX + 3.5, row2Y + 15.2);
 
+  const breakdownStr = wallet.walletBreakdown && wallet.walletBreakdown.length > 0
+    ? wallet.walletBreakdown.map((b) => `${b.wallet.split('/')[0].trim()}: $${b.amountUSD.toFixed(0)}`).join(' · ')
+    : 'Bóveda / Custodia Pastoral';
   doc.setTextColor(5, 150, 105);
-  doc.text(`• Última tasa registrada: ${wallet.lastExchangeRate > 0 ? wallet.lastExchangeRate.toFixed(2) : '44.50'} Bs/$  ·  Fondo de resguardo patrimonial`, usdX + 3.5, row2Y + 18.5);
+  doc.text(`• En carteras: ${breakdownStr.length > 40 ? breakdownStr.slice(0, 38) + '...' : breakdownStr}`, usdX + 3.5, row2Y + 18.5);
 
   // Restaurar ancho de línea estándar
   doc.setLineWidth(0.2);

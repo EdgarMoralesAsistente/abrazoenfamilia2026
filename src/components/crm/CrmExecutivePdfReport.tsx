@@ -472,6 +472,14 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
                         +Bs. {wallet.totalVesCollectedEstimated.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
+                    {wallet.totalExpensesVES && wallet.totalExpensesVES > 0 ? (
+                      <div className="flex items-center justify-between text-stone-600">
+                        <span>(-) Salidas operativas:</span>
+                        <span className="font-bold text-rose-700 font-mono">
+                          -Bs. {wallet.totalExpensesVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    ) : null}
                     <div className="flex items-center justify-between text-stone-600">
                       <span>(-) Usado para comprar USD:</span>
                       <span className="font-bold text-amber-900 font-mono">
@@ -504,12 +512,21 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
                         {wallet.purchaseCount} ops
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-stone-600">
-                      <span>Tasa promedio ponderada:</span>
-                      <span className="font-bold text-emerald-800 font-mono">
-                        {wallet.averageExchangeRate > 0 ? wallet.averageExchangeRate.toFixed(2) : '0.00'} Bs/$
-                      </span>
-                    </div>
+                    {wallet.walletBreakdown && wallet.walletBreakdown.length > 0 ? (
+                      <div className="flex items-center justify-between text-stone-600 truncate">
+                        <span>Por cartera:</span>
+                        <span className="font-bold text-emerald-800 font-mono truncate max-w-[140px]" title={wallet.walletBreakdown.map(b => `${b.wallet}: $${b.amountUSD}`).join(', ')}>
+                          {wallet.walletBreakdown.map(b => `${b.wallet.split('/')[0].trim()}: $${b.amountUSD.toFixed(0)}`).join(' · ')}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between text-stone-600">
+                        <span>Tasa promedio ponderada:</span>
+                        <span className="font-bold text-emerald-800 font-mono">
+                          {wallet.averageExchangeRate > 0 ? wallet.averageExchangeRate.toFixed(2) : '0.00'} Bs/$
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

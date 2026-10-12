@@ -14,7 +14,8 @@ import {
   LogOut,
   UserCheck,
   Layers,
-  DollarSign
+  DollarSign,
+  TrendingDown
 } from 'lucide-react';
 import {
   CrmReservation,
@@ -23,7 +24,9 @@ import {
   PaymentStatus,
   DeliveryStatus,
   DollarPurchase,
-  DollarWalletSummary
+  DollarWalletSummary,
+  CrmExpense,
+  ExpensesSummary
 } from '../../types/reservation';
 import { CrmUser } from '../../types/auth';
 import {
@@ -38,6 +41,15 @@ import {
   calculateDollarWalletSummary,
   syncDollarPurchasesWithSheets
 } from '../../utils/dollarWalletStorage';
+import {
+  getStoredExpenses,
+  calculateExpensesSummary,
+  syncExpensesWithSheets
+} from '../../utils/expensesStorage';
+import {
+  generateFinancialReportPdf,
+  downloadFinancialReportPdfBlob
+} from '../../utils/generateFinancialReportPdf';
 import { formatPhoneForWhatsApp } from '../../utils/phoneUtils';
 import { CrmKpiCards } from './CrmKpiCards';
 import { CrmCharts } from './CrmCharts';
@@ -46,6 +58,7 @@ import { CrmCreateModal } from './CrmCreateModal';
 import { CrmExecutivePdfReport } from './CrmExecutivePdfReport';
 import { CrmSheetsSetupModal } from './CrmSheetsSetupModal';
 import { CrmDollarPurchaseModal } from './CrmDollarPurchaseModal';
+import { CrmExpensesModal } from './CrmExpensesModal';
 
 interface CrmDashboardProps {
   onBackToPublicSite: () => void;
@@ -75,10 +88,14 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [isSheetsSetupModalOpen, setIsSheetsSetupModalOpen] = useState(false);
   const [isDollarModalOpen, setIsDollarModalOpen] = useState(false);
+  const [isExpensesModalOpen, setIsExpensesModalOpen] = useState(false);
   const [deletingCode, setDeletingCode] = useState<string | null>(null);
 
   // Cartera de Dólares & Cobertura Cambiaria (USD vs Bolívares)
   const [dollarPurchases, setDollarPurchases] = useState<DollarPurchase[]>(() => getStoredDollarPurchases());
+
+  // Salidas y Gastos Operativos de Tesorería
+  const [expenses, setExpenses] = useState<CrmExpense[]>(() => getStoredExpenses());
 
   // Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -92,11 +109,19 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
 
   // Carga y sincronización de datos con Google Sheets
   const loadData = async (showLoading = true, notifyIfNew = false) => {
-    // Sincronizar compras de dólares desde Google Sheets
+    // Sincronizar compras de dólares y gastos desde Google Sheets
     try {
       syncDollarPurchasesWithSheets().then((usdRes) => {
         if (usdRes.success && Array.isArray(usdRes.data)) {
           setDollarPurchases(usdRes.data);
+        }
+      }).catch(() => {});
+    } catch {}
+
+    try {
+      syncExpensesWithSheets().then((expRes) => {
+        if (expRes.success && Array.isArray(expRes.data)) {
+          setExpenses(expRes.data);
         }
       }).catch(() => {});
     } catch {}
@@ -242,18 +267,76 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
     };
   }, [reservations]);
 
-  // Resumen financiero de la Cartera de Dólares
-  const walletSummary: DollarWalletSummary = useMemo(() => {
-    return calculateDollarWalletSummary(dollarPurchases, reservations, 44.5);
-  }, [dollarPurchases, reservations]);
+  // Resumen de Salidas y Gastos
+  const expensesSummary: ExpensesSummary = useMemo(() => {
+    return calculateExpensesSummary(expenses);
+  }, [expenses]);
 
-  // KPIs unificados con el resumen de la Cartera de Dólares
+  // Resumen financiero de la Cartera de Dólares y Disponibilidad en Bolívares luego de restar salidas
+  const walletSummary: DollarWalletSummary = useMemo(() => {
+    return calculateDollarWalletSummary(
+      dollarPurchases,
+      reservations,
+      44.5,
+      expensesSummary.totalExpensesVES,
+      expensesSummary.totalExpensesUSD
+    );
+  }, [dollarPurchases, reservations, expensesSummary]);
+
+  // KPIs unificados con el resumen de la Cartera de Dólares y Salidas
   const kpisWithWallet: CrmKPIs = useMemo(() => {
     return {
       ...kpis,
-      walletSummary
+      walletSummary,
+      expensesSummary
     };
-  }, [kpis, walletSummary]);
+  }, [kpis, walletSummary, expensesSummary]);
+
+  // Descarga del Reporte de Finanzas en PDF (Entradas, Salidas y Saldo)
+  const handleDownloadFinancialReport = async () => {
+    try {
+      showToast('Sincronizando datos con Google Sheets y generando reporte...', 'info');
+
+      // Asegurar que dollarPurchases y expenses reflejen los datos reales más recientes de Google Sheets
+      let latestPurchases = dollarPurchases;
+      let latestExpenses = expenses;
+
+      try {
+        const [usdRes, expRes] = await Promise.all([
+          syncDollarPurchasesWithSheets(),
+          syncExpensesWithSheets()
+        ]);
+        if (usdRes.success && Array.isArray(usdRes.data)) {
+          latestPurchases = usdRes.data;
+          setDollarPurchases(usdRes.data);
+        }
+        if (expRes.success && Array.isArray(expRes.data)) {
+          latestExpenses = expRes.data;
+          setExpenses(expRes.data);
+        }
+      } catch (syncErr) {
+        console.warn('Sincronización previa al reporte financiero completada en modo contingencia:', syncErr);
+      }
+
+      const doc = await generateFinancialReportPdf({
+        reservations,
+        kpis: kpisWithWallet,
+        expenses: latestExpenses,
+        dollarPurchases: latestPurchases,
+        currentUser: currentUser || undefined
+      });
+      const success = downloadFinancialReportPdfBlob(
+        doc,
+        `Reporte_Finanzas_AEF_2026_${new Date().toISOString().slice(0, 10)}.pdf`
+      );
+      if (success) {
+        showToast('¡Reporte de finanzas descargado con éxito!', 'success');
+      }
+    } catch (err: any) {
+      console.error('Error generando reporte de finanzas:', err);
+      showToast('No se pudo generar el reporte de finanzas.', 'error');
+    }
+  };
 
   // Filtrado de reservas
   const filteredReservations = useMemo(() => {
@@ -476,6 +559,19 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
               <span>Exportar CSV</span>
             </button>
 
+            {/* Botón Salidas / Gastos Operativos */}
+            <button
+              onClick={() => setIsExpensesModalOpen(true)}
+              className="h-9 px-3 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-900 inline-flex items-center gap-1.5 transition-colors shadow-2xs shrink-0 whitespace-nowrap cursor-pointer"
+              title="Registrar y auditar salidas de dinero (Gastos e Imprenta)"
+            >
+              <TrendingDown className="w-3.5 h-3.5 text-rose-700" />
+              <span>Salidas:</span>
+              <span className="font-mono text-rose-950 font-black bg-white px-1.5 py-0.5 rounded border border-rose-200 text-[11px]">
+                {expenses.length}
+              </span>
+            </button>
+
             {/* Botón Cartera de Dólares (Anti-Devaluación) */}
             <button
               onClick={() => setIsDollarModalOpen(true)}
@@ -579,6 +675,15 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
           {/* Acciones principales en móvil con altura y estilo uniforme */}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
+              onClick={() => setIsExpensesModalOpen(true)}
+              className="h-8.5 px-2 rounded-lg border border-rose-300 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-xs font-bold text-rose-900 inline-flex items-center gap-1 shadow-2xs transition-all shrink-0"
+              title="Salidas y Gastos de Tesorería"
+            >
+              <TrendingDown className="w-3.5 h-3.5 text-rose-700" />
+              <span className="font-mono text-[11px]">{expenses.length}</span>
+            </button>
+
+            <button
               onClick={() => setIsDollarModalOpen(true)}
               className="h-8.5 px-2 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-xs font-bold text-emerald-900 inline-flex items-center gap-1 shadow-2xs transition-all shrink-0"
               title="Cartera de Dólares (Anti-Devaluación)"
@@ -629,8 +734,13 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
           </div>
         )}
 
-        {/* 1. Módulo de Tarjetas KPI con Cartera de Dólares */}
-        <CrmKpiCards kpis={kpisWithWallet} onOpenDollarWallet={() => setIsDollarModalOpen(true)} />
+        {/* 1. Módulo de Tarjetas KPI con Entradas, Salidas y Disponibilidad */}
+        <CrmKpiCards
+          kpis={kpisWithWallet}
+          onOpenDollarWallet={() => setIsDollarModalOpen(true)}
+          onOpenExpenses={() => setIsExpensesModalOpen(true)}
+          onDownloadFinancialReport={handleDownloadFinancialReport}
+        />
 
         {/* 2. Módulo de Gráficos Recharts */}
         <CrmCharts reservations={reservations} />
@@ -935,6 +1045,17 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
         summary={walletSummary}
         operatorName={currentUser?.name || 'Secretariado Pastoral Familiar'}
         onSuccessToast={(msg) => showToast(msg, 'success')}
+      />
+
+      {/* Modal de Salidas & Gastos de Tesorería */}
+      <CrmExpensesModal
+        isOpen={isExpensesModalOpen}
+        onClose={() => setIsExpensesModalOpen(false)}
+        expenses={expenses}
+        onExpensesUpdated={(updated) => setExpenses(updated)}
+        onDownloadFinancialReport={handleDownloadFinancialReport}
+        currentUser={currentUser}
+        defaultRate={walletSummary.lastExchangeRate || 44.5}
       />
 
       {/* Modal de Estructura Multi-Hojas en Google Sheets */}

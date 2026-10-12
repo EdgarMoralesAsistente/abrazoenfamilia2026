@@ -14,7 +14,8 @@ import {
   X,
   FileCode,
   ArrowRight,
-  DollarSign
+  DollarSign,
+  TrendingDown
 } from 'lucide-react';
 import { setupRequiredSheets } from '../../lib/googleSheets';
 
@@ -57,6 +58,13 @@ export const CrmSheetsSetupModal: React.FC<CrmSheetsSetupModalProps> = ({
       icon: CreditCard,
       color: 'bg-emerald-100 text-emerald-900 border-emerald-200',
       badge: 'Finanzas'
+    },
+    {
+      name: 'Salidas y Gastos',
+      desc: 'Control de egresos operativos, pagos a imprenta, fletes, materiales y rendición de cuentas de tesorería.',
+      icon: TrendingDown,
+      color: 'bg-rose-100 text-rose-950 border-rose-300',
+      badge: 'Egresos'
     },
     {
       name: 'Cartera de Dólares',

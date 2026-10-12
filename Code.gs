@@ -9,6 +9,7 @@
 const SHEET_NAME = "Reservas CRM";
 const USERS_SHEET_NAME = "Usuarios CRM";
 const PAYMENTS_SHEET_NAME = "Pagos Reportados";
+const EXPENSES_SHEET_NAME = "Salidas y Gastos";
 const USD_WALLET_SHEET_NAME = "Cartera de Dólares";
 const INVENTORY_SHEET_NAME = "Inventario y Despachos";
 const AUDIT_SHEET_NAME = "Historial y Auditoría";
@@ -196,6 +197,37 @@ function initializeAllRequiredSheets() {
   }
 
   // ==========================================
+  // 3.5. Hoja "Salidas y Gastos" (Egresos Operativos)
+  // ==========================================
+  let expSheet = ss.getSheetByName(EXPENSES_SHEET_NAME);
+  if (!expSheet) {
+    expSheet = ss.insertSheet(EXPENSES_SHEET_NAME);
+    expSheet.appendRow([
+      "Fecha y Hora",
+      "ID Egreso",
+      "Fecha Egreso",
+      "Concepto / Descripción",
+      "Categoría",
+      "Monto Bolívares (Bs.)",
+      "Monto Dólares ($ USD)",
+      "Moneda Base",
+      "Método / Cuenta Origen",
+      "Beneficiario / Proveedor",
+      "Nro. Referencia",
+      "Operador / Responsable",
+      "Notas"
+    ]);
+    expSheet.getRange(1, 1, 1, 13)
+      .setFontWeight("bold")
+      .setBackground("#9f1239") // Rojo rosa egresos
+      .setFontColor("#ffffff");
+    expSheet.setFrozenRows(1);
+    createdSheets.push(EXPENSES_SHEET_NAME);
+  } else {
+    existingSheets.push(EXPENSES_SHEET_NAME);
+  }
+
+  // ==========================================
   // 4. Hoja "Inventario y Despachos"
   // ==========================================
   let inventarioSheet = ss.getSheetByName(INVENTORY_SHEET_NAME);
@@ -279,7 +311,7 @@ function initializeAllRequiredSheets() {
     message: "Verificación y creación de hojas completada con éxito.",
     createdSheets: createdSheets,
     existingSheets: existingSheets,
-    allSheets: [SHEET_NAME, PAYMENTS_SHEET_NAME, USD_WALLET_SHEET_NAME, INVENTORY_SHEET_NAME, USERS_SHEET_NAME, AUDIT_SHEET_NAME]
+    allSheets: [SHEET_NAME, PAYMENTS_SHEET_NAME, EXPENSES_SHEET_NAME, USD_WALLET_SHEET_NAME, INVENTORY_SHEET_NAME, USERS_SHEET_NAME, AUDIT_SHEET_NAME]
   };
 }
 
@@ -494,6 +526,106 @@ function deleteDollarPurchaseInSheet(id, operator) {
 }
 
 /**
+ * Registra una salida / gasto en la pestaña "Salidas y Gastos"
+ */
+function recordExpenseInSheet(body) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(EXPENSES_SHEET_NAME);
+    if (!sheet) {
+      initializeAllRequiredSheets();
+      sheet = ss.getSheetByName(EXPENSES_SHEET_NAME);
+    }
+    if (!sheet) return;
+
+    const row = [
+      body.timestamp || Utilities.formatDate(new Date(), "America/Caracas", "dd/MM/yyyy HH:mm"),
+      body.id || ("EXP-" + Date.now().toString().slice(-4)),
+      body.date || "",
+      body.concept || "Gasto Operativo",
+      body.category || "Otro",
+      Number(body.amountVES || 0),
+      Number(body.amountUSD || 0),
+      body.currency || "VES",
+      body.paymentMethod || "Pago Móvil / Banco",
+      body.beneficiary || "",
+      body.reference || "",
+      body.operator || "Equipo Pastoral",
+      body.notes || ""
+    ];
+
+    sheet.appendRow(row);
+    recordAuditLog(body.operator || "Equipo Pastoral", "RECORD_EXPENSE", body.id || "", "Gasto registrado: " + (body.concept || ""));
+  } catch (err) {
+    Logger.log("Error al registrar egreso en hoja: " + err);
+  }
+}
+
+/**
+ * Actualiza una salida en la pestaña "Salidas y Gastos"
+ */
+function updateExpenseInSheet(body) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(EXPENSES_SHEET_NAME);
+    if (!sheet) return;
+
+    const targetId = String(body.id || "").trim();
+    if (!targetId) return;
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return;
+
+    const values = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0]).trim() === targetId) {
+        const rowIndex = i + 2;
+        sheet.getRange(rowIndex, 3).setValue(body.date || "");
+        sheet.getRange(rowIndex, 4).setValue(body.concept || "");
+        sheet.getRange(rowIndex, 5).setValue(body.category || "");
+        sheet.getRange(rowIndex, 6).setValue(Number(body.amountVES || 0));
+        sheet.getRange(rowIndex, 7).setValue(Number(body.amountUSD || 0));
+        sheet.getRange(rowIndex, 8).setValue(body.currency || "VES");
+        sheet.getRange(rowIndex, 9).setValue(body.paymentMethod || "");
+        sheet.getRange(rowIndex, 10).setValue(body.beneficiary || "");
+        sheet.getRange(rowIndex, 11).setValue(body.reference || "");
+        sheet.getRange(rowIndex, 12).setValue(body.operator || "");
+        sheet.getRange(rowIndex, 13).setValue(body.notes || "");
+        recordAuditLog(body.operator || "Equipo Pastoral", "UPDATE_EXPENSE", targetId, "Egreso actualizado");
+        break;
+      }
+    }
+  } catch (err) {
+    Logger.log("Error actualizando egreso: " + err);
+  }
+}
+
+/**
+ * Elimina una salida en la pestaña "Salidas y Gastos"
+ */
+function deleteExpenseInSheet(targetId, operator) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(EXPENSES_SHEET_NAME);
+    if (!sheet) return;
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return;
+
+    const values = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0]).trim() === targetId) {
+        sheet.deleteRow(i + 2);
+        recordAuditLog(operator || "Administrador", "DELETE_EXPENSE", targetId, "Egreso eliminado/anulado");
+        break;
+      }
+    }
+  } catch (err) {
+    Logger.log("Error al eliminar egreso: " + err);
+  }
+}
+
+/**
  * Sincroniza el despacho y logística en la pestaña "Inventario y Despachos"
  */
 function recordDispatchInInventorySheet(body) {
@@ -647,6 +779,41 @@ function doGet(e) {
       return createJsonResponse({ status: "success", count: purchases.length, data: purchases });
     }
 
+    // Consulta de Salidas y Gastos
+    if (sheetParam === "expenses" || sheetParam === "salidas" || sheetParam === "gastos") {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      let expSheet = ss.getSheetByName(EXPENSES_SHEET_NAME);
+      if (!expSheet) {
+        initializeAllRequiredSheets();
+        expSheet = ss.getSheetByName(EXPENSES_SHEET_NAME);
+      }
+      const lastRow = expSheet.getLastRow();
+      if (lastRow <= 1) {
+        return createJsonResponse({ status: "success", count: 0, data: [] });
+      }
+
+      const rows = expSheet.getRange(2, 1, lastRow - 1, 13).getValues();
+      const expenses = rows.map(function(r) {
+        return {
+          timestamp: String(r[0] || ""),
+          id: String(r[1] || ""),
+          date: String(r[2] || ""),
+          concept: String(r[3] || ""),
+          category: String(r[4] || ""),
+          amountVES: Number(r[5] || 0),
+          amountUSD: Number(r[6] || 0),
+          currency: String(r[7] || "VES"),
+          paymentMethod: String(r[8] || ""),
+          beneficiary: String(r[9] || ""),
+          reference: String(r[10] || ""),
+          operator: String(r[11] || ""),
+          notes: String(r[12] || "")
+        };
+      }).filter(function(e) { return e.id !== ""; });
+
+      return createJsonResponse({ status: "success", count: expenses.length, data: expenses });
+    }
+
     // Consulta por defecto: Reservas
     const sheet = getTargetSheet();
     const lastRow = sheet.getLastRow();
@@ -757,6 +924,36 @@ function doPost(e) {
         status: "success",
         action: "DELETE_USD_PURCHASE",
         message: "Compra de divisas eliminada de Cartera de Dólares."
+      });
+    }
+
+    // ==========================================
+    // 0.6. ACCIÓN: REGISTRO, EDICIÓN Y ELIMINACIÓN DE SALIDAS Y GASTOS
+    // ==========================================
+    if (action === "RECORD_EXPENSE" || action === "CREATE_EXPENSE") {
+      recordExpenseInSheet(body);
+      return createJsonResponse({
+        status: "success",
+        action: "RECORD_EXPENSE",
+        message: "Salida registrada exitosamente en Google Sheets."
+      });
+    }
+
+    if (action === "UPDATE_EXPENSE" || action === "EDIT_EXPENSE") {
+      updateExpenseInSheet(body);
+      return createJsonResponse({
+        status: "success",
+        action: "UPDATE_EXPENSE",
+        message: "Salida actualizada exitosamente en Google Sheets."
+      });
+    }
+
+    if (action === "DELETE_EXPENSE" || action === "REMOVE_EXPENSE") {
+      deleteExpenseInSheet(body.id, body.operator);
+      return createJsonResponse({
+        status: "success",
+        action: "DELETE_EXPENSE",
+        message: "Salida eliminada exitosamente de Google Sheets."
       });
     }
 

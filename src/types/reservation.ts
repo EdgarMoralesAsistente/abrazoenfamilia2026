@@ -54,6 +54,7 @@ export interface CrmKPIs {
   piezasParroquias: number;
   piezasColegios: number;
   walletSummary?: DollarWalletSummary;
+  expensesSummary?: ExpensesSummary;
 }
 
 export interface DollarPurchase {
@@ -70,6 +71,13 @@ export interface DollarPurchase {
   notes: string;
 }
 
+export interface WalletBreakdownItem {
+  wallet: string;
+  amountUSD: number;
+  count: number;
+  percentage: number;
+}
+
 export interface DollarWalletSummary {
   totalUsdPurchased: number;
   totalVesSpent: number;
@@ -78,4 +86,29 @@ export interface DollarWalletSummary {
   purchaseCount: number;
   totalVesCollectedEstimated: number;
   availableVesBalance: number;
+  walletBreakdown?: WalletBreakdownItem[];
+  totalExpensesVES?: number;
+  totalExpensesUSD?: number;
+}
+
+export interface CrmExpense {
+  id: string;
+  timestamp: string;
+  date: string;
+  concept: string;
+  category: string;
+  amountVES: number;
+  amountUSD?: number;
+  currency: 'VES' | 'USD';
+  paymentMethod: string;
+  beneficiary?: string;
+  reference: string;
+  operator: string;
+  notes: string;
+}
+
+export interface ExpensesSummary {
+  totalExpensesVES: number;
+  totalExpensesUSD: number;
+  expenseCount: number;
 }

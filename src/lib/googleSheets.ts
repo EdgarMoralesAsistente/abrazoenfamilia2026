@@ -1,4 +1,4 @@
-import { CrmReservation, DollarPurchase } from '../types/reservation';
+import { CrmReservation, DollarPurchase, CrmExpense } from '../types/reservation';
 import { getSheetsWebhookUrl } from '../utils/sheetsSync';
 
 export const getGasEndpoint = (): string => {
@@ -77,7 +77,7 @@ export async function setupRequiredSheets(operatorName: string = 'Administrador'
     return {
       success: true,
       message: 'Se envió la orden de creación de hojas al webhook de Google Sheets.',
-      allSheets: ['Reservas CRM', 'Pagos Reportados', 'Cartera de Dólares', 'Inventario y Despachos', 'Usuarios CRM', 'Historial y Auditoría']
+      allSheets: ['Reservas CRM', 'Pagos Reportados', 'Salidas y Gastos', 'Cartera de Dólares', 'Inventario y Despachos', 'Usuarios CRM', 'Historial y Auditoría']
     };
   } catch (error: any) {
     // Si fetch falla por CORS en navegador, el envío no-cors igualmente despacha la orden a Apps Script
@@ -94,7 +94,7 @@ export async function setupRequiredSheets(operatorName: string = 'Administrador'
       return {
         success: true,
         message: 'Orden enviada a Google Sheets en modo transparente (no-cors).',
-        allSheets: ['Reservas CRM', 'Pagos Reportados', 'Cartera de Dólares', 'Inventario y Despachos', 'Usuarios CRM', 'Historial y Auditoría']
+        allSheets: ['Reservas CRM', 'Pagos Reportados', 'Salidas y Gastos', 'Cartera de Dólares', 'Inventario y Despachos', 'Usuarios CRM', 'Historial y Auditoría']
       };
     } catch (fallbackError: any) {
       return {
@@ -592,4 +592,125 @@ export async function deleteDollarPurchaseInSheets(id: string, operator: string 
     return false;
   }
 }
+
+/**
+ * Consulta las salidas y gastos registrados desde Google Sheets
+ */
+export async function fetchExpensesFromSheets(): Promise<{
+  success: boolean;
+  data: CrmExpense[];
+  message?: string;
+}> {
+  const endpoint = getGasEndpoint();
+  if (!endpoint || !endpoint.startsWith('http')) {
+    return { success: false, data: [], message: 'Endpoint no configurado' };
+  }
+
+  try {
+    const url = endpoint.includes('?') ? `${endpoint}&sheet=expenses` : `${endpoint}?sheet=expenses`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP Error ${response.status}`);
+    }
+
+    const result = await response.json();
+    if (result && Array.isArray(result.data)) {
+      const formatted: CrmExpense[] = result.data.map((row: any) => ({
+        id: String(row.id || ''),
+        timestamp: String(row.timestamp || ''),
+        date: String(row.date || row.timestamp || ''),
+        concept: String(row.concept || ''),
+        category: String(row.category || 'Otro'),
+        amountVES: Number(row.amountVES || row.vesAmount || 0),
+        amountUSD: Number(row.amountUSD || row.usdAmount || 0),
+        currency: (row.currency === 'USD' ? 'USD' : 'VES') as 'VES' | 'USD',
+        paymentMethod: String(row.paymentMethod || 'Pago Móvil / Banco'),
+        beneficiary: String(row.beneficiary || ''),
+        reference: String(row.reference || ''),
+        operator: String(row.operator || 'Equipo Pastoral'),
+        notes: String(row.notes || '')
+      })).filter((e) => e.id !== '');
+
+      return { success: true, data: formatted };
+    }
+    return { success: false, data: [], message: 'Formato no reconocido' };
+  } catch (error: any) {
+    return { success: false, data: [], message: error.message };
+  }
+}
+
+/**
+ * Registra una salida / gasto en Google Sheets (action: 'RECORD_EXPENSE')
+ */
+export async function createExpenseInSheets(expense: CrmExpense): Promise<boolean> {
+  const endpoint = getGasEndpoint();
+  if (!endpoint || !endpoint.startsWith('http')) return false;
+
+  try {
+    await fetch(endpoint, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'RECORD_EXPENSE',
+        ...expense
+      })
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Actualiza una salida / gasto en Google Sheets (action: 'UPDATE_EXPENSE')
+ */
+export async function updateExpenseInSheets(expense: CrmExpense): Promise<boolean> {
+  const endpoint = getGasEndpoint();
+  if (!endpoint || !endpoint.startsWith('http')) return false;
+
+  try {
+    await fetch(endpoint, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'UPDATE_EXPENSE',
+        ...expense
+      })
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Elimina una salida / gasto en Google Sheets (action: 'DELETE_EXPENSE')
+ */
+export async function deleteExpenseInSheets(id: string, operator: string = 'Administrador'): Promise<boolean> {
+  const endpoint = getGasEndpoint();
+  if (!endpoint || !endpoint.startsWith('http')) return false;
+
+  try {
+    await fetch(endpoint, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'DELETE_EXPENSE',
+        id,
+        operator
+      })
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 
