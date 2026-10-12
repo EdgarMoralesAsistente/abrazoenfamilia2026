@@ -21,7 +21,7 @@ import {
   Coins,
   DollarSign
 } from 'lucide-react';
-import { CrmReservation, CrmKPIs } from '../../types/reservation';
+import { CrmReservation, CrmKPIs, CrmExpense, DollarPurchase } from '../../types/reservation';
 import { CrmUser } from '../../types/auth';
 import {
   generateCrmExecutivePdf,
@@ -35,6 +35,8 @@ interface CrmExecutivePdfReportProps {
   reservations: CrmReservation[];
   kpis: CrmKPIs;
   currentUser?: CrmUser;
+  expenses?: CrmExpense[];
+  dollarPurchases?: DollarPurchase[];
 }
 
 export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
@@ -42,7 +44,9 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
   onClose,
   reservations,
   kpis,
-  currentUser
+  currentUser,
+  expenses,
+  dollarPurchases
 }) => {
   const reportRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -137,12 +141,18 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
     setErrorMessage(null);
 
     try {
-      // 1. Generar documento PDF con jsPDF vectorial de 1 página exacta con el logo oficial
-      const pdf = await generateCrmExecutivePdf(kpis, reservations, currentUser);
+      // 1. Generar documento PDF Integral Unificado (Gestión, Producción, Finanzas y Transacciones)
+      const pdf = await generateCrmExecutivePdf(
+        kpis,
+        reservations,
+        currentUser,
+        expenses,
+        dollarPurchases
+      );
 
-      // 2. Nombre descriptivo con fecha
+      // 2. Nombre descriptivo unificado con fecha
       const fileDate = now.toISOString().slice(0, 10);
-      const filename = `Reporte_Ejecutivo_CRM_Pastoral_Familiar_${fileDate}.pdf`;
+      const filename = `Reporte_Ejecutivo_Gestion_Finanzas_AEF_2026_${fileDate}.pdf`;
 
       // 3. Descarga mediante Blob URL resiliente
       const ok = downloadExecutivePdfBlob(pdf, filename);
@@ -163,7 +173,13 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
   // Función alternativa para abrir el PDF en una pestaña nueva o imprimir directamente
   const handleOpenOrPrintPdf = async () => {
     try {
-      const pdf = await generateCrmExecutivePdf(kpis, reservations, currentUser);
+      const pdf = await generateCrmExecutivePdf(
+        kpis,
+        reservations,
+        currentUser,
+        expenses,
+        dollarPurchases
+      );
       const blob = pdf.output('blob');
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
@@ -184,10 +200,10 @@ export const CrmExecutivePdfReport: React.FC<CrmExecutivePdfReportProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-black text-stone-900 leading-none">
-                Reporte Ejecutivo en PDF (1 Página)
+                Reporte Ejecutivo & Financiero Integral (.PDF)
               </h3>
               <p className="text-[11px] text-stone-500 mt-0.5">
-                Diagramación lista para impresión y toma de decisiones (excluye listado de filas)
+                Gestión, Producción, Cobranzas, Entradas, Salidas y Tesorería Completa (Mismo documento unificado)
               </p>
             </div>
           </div>

@@ -327,14 +327,14 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
       });
       const success = downloadFinancialReportPdfBlob(
         doc,
-        `Reporte_Finanzas_AEF_2026_${new Date().toISOString().slice(0, 10)}.pdf`
+        `Reporte_Ejecutivo_Gestion_Finanzas_AEF_2026_${new Date().toISOString().slice(0, 10)}.pdf`
       );
       if (success) {
-        showToast('¡Reporte de finanzas descargado con éxito!', 'success');
+        showToast('¡Reporte ejecutivo y financiero descargado con éxito!', 'success');
       }
     } catch (err: any) {
-      console.error('Error generando reporte de finanzas:', err);
-      showToast('No se pudo generar el reporte de finanzas.', 'error');
+      console.error('Error generando reporte unificado:', err);
+      showToast('No se pudo generar el reporte ejecutivo y financiero.', 'error');
     }
   };
 
@@ -585,14 +585,14 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
               </span>
             </button>
 
-            {/* Botón Descargar Reporte PDF (1 Página) */}
+            {/* Botón Descargar Reporte PDF Integral */}
             <button
               onClick={() => setIsPdfModalOpen(true)}
               className="h-9 px-3.5 rounded-xl border border-amber-200/80 bg-amber-50 hover:bg-amber-100 text-xs font-bold text-amber-900 inline-flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer shrink-0 whitespace-nowrap"
-              title="Descargar Reporte Ejecutivo en PDF (1 página con KPI y Gráficos)"
+              title="Descargar Reporte Ejecutivo & Financiero Integral en PDF (Gestión, Producción, Entradas, Salidas y Tesorería)"
             >
               <FileText className="w-3.5 h-3.5 text-amber-800" />
-              <span>Reporte PDF (1 Pág)</span>
+              <span>Reporte PDF Integral</span>
             </button>
 
             {/* Botón Nueva Reserva */}
@@ -1027,13 +1027,15 @@ export const CrmDashboard: React.FC<CrmDashboardProps> = ({
         onCreate={handleCreateReservation}
       />
 
-      {/* Modal de Reporte Ejecutivo en PDF (1 Página) */}
+      {/* Modal de Reporte Ejecutivo & Financiero Integral en PDF */}
       <CrmExecutivePdfReport
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}
         reservations={reservations}
         kpis={kpisWithWallet}
         currentUser={currentUser}
+        expenses={expenses}
+        dollarPurchases={dollarPurchases}
       />
 
       {/* Modal de Cartera de Dólares & Cobertura Cambiaria */}
