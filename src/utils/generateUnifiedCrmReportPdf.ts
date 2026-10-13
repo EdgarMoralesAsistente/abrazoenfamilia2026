@@ -1402,9 +1402,36 @@ export async function generateUnifiedCrmPdf(data: UnifiedReportData): Promise<js
   );
   cursorY += 6;
 
-  // Filtrar reservas por parroquias y colegios
-  const parroquiasReservas = reservations.filter((r) => r.institutionType === 'Parroquia');
-  const colegiosReservas = reservations.filter((r) => r.institutionType !== 'Parroquia');
+  // Helper de ordenamiento: Segundo Nivel = Estado de pago, Tercer Nivel = Alfabético por nombre
+  const paymentWeight: Record<string, number> = {
+    'Pagado': 1,
+    'Verificando': 2,
+    'Pendiente': 3
+  };
+
+  const sortReservasReporte = (a: CrmReservation, b: CrmReservation) => {
+    // Segundo Nivel: Estado del pago
+    const weightA = paymentWeight[a.paymentStatus] || 99;
+    const weightB = paymentWeight[b.paymentStatus] || 99;
+    if (weightA !== weightB) return weightA - weightB;
+
+    // Tercer Nivel: Alfabéticamente por el nombre de la institución
+    const nameA = (a.institutionName || '').trim();
+    const nameB = (b.institutionName || '').trim();
+    const nameComp = nameA.localeCompare(nameB, 'es', { sensitivity: 'base', numeric: true });
+    if (nameComp !== 0) return nameComp;
+
+    return (a.code || '').localeCompare(b.code || '');
+  };
+
+  // Filtrar reservas por parroquias y colegios ordenadas alfabéticamente y por estado de pago
+  const parroquiasReservas = reservations
+    .filter((r) => r.institutionType === 'Parroquia')
+    .sort(sortReservasReporte);
+
+  const colegiosReservas = reservations
+    .filter((r) => r.institutionType !== 'Parroquia')
+    .sort(sortReservasReporte);
 
   // Helper para dibujar encabezado de tabla de Entradas
   const drawIncomeTableHeader = () => {
